@@ -1,0 +1,76 @@
+body {
+}
+#app {
+  font-family: monospace;
+  width: 100%;
+  max-width: 768px;
+  margin: 0 auto;
+}
+#main-pad, #final-pad, #fragment-results textarea, #temp-pad {
+  font-size: 10px;
+  width: 100%;
+  height: auto;
+  white-space: pre-wrap;
+  padding:0px;
+  margin-bottom: 0px;
+  border: 1px solid #ccc;
+  overflow: auto;
+}
+#load-name,
+#load-pass {
+  font-size: 10px;
+  width: 49%; /* Adjusted width to 49% to account for any potential padding or border */
+  height: auto;
+  white-space: pre-wrap;
+  padding: 0px;
+  margin-bottom: 0px;
+  border: 1px solid #ccc;
+  overflow: auto;
+  display: inline-block; /* Makes them sit side by side */
+}
+#main-pad {
+  height: 600px;
+}
+#fragment-vertical {
+  display: flex;
+  height: 500px;
+  justify-content: space-between;
+}
+#search-section {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+#search-query {
+  flex-grow: 1;
+  margin-right: 10px;
+}
+#fragment-results {
+  width: 69%;
+  overflow: auto;
+  border: 1px solid #ccc;
+}
+#temp-pad {
+  width: 29%;
+  position: sticky;
+}
+#debug {
+  white-space: pre;
+}
+@media (max-width: 767px) {
+  #app {
+    width: 100%;
+  }
+  #fragment-vertical {
+    flex-direction: column-reverse;
+  }
+  #fragment-results {
+    height: 69%;
+    width: 100%;
+  }
+  #temp-pad {
+    height: 29%;
+    width: 100%;
+  }
+}
