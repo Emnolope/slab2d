@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Notepad App</title>
+  <!--<link rel="stylesheet" type="text/css" href="styles.css">-->
+</head>
+<body>
+  <div id="app">
+    <div id="noteSection">
+      <input id="load-name" type="text" placeholder="File Name">
+      <input id="load-pass" type="password" placeholder="Pass">
+      <button onclick="load(loadName.value,loadPass.value)">Load</button>
+      <button onclick="button()">BUTTON</button>
+      <textarea id="main-pad" placeholder="Your notes here..."></textarea>
+    </div>
+    <details id="graph-section">
+      <summary>
+        <h1>Graph</h1>
+      </summary>
+      <button onclick="extractTags(graphQuery.value)">RipTags</button>
+      <input id="graph-query" type="text" placeholder="Search tag relations">
+      <button onclick="graphSearch(graphQuery.value)">Search Graph</button>
+      <textarea id="graph-results"></textarea>
+    </details>
+    <div id="search-section">
+      <input id="search-query" type="text" placeholder="Search tags...">
+      <button onclick="searchNotesAndDisplay()">Go!</button>
+      <input id="search-singleton" type="checkbox">Singles
+    </div>
+    <div id="fragment-section">
+      <div id="fragment-vertical">
+        <div id="fragment-results"></div>
+        <textarea id="temp-pad" placeholder="Jot whatever you want on the Scratchpad."></textarea>
+      </div>
+      <button onclick="combineFragments()">Bunch</button>
+      <button onclick="combineFragmentsCram()">BunchCram</button>
+    </div>
+    <div>
+      <textarea id="final-pad" readonly></textarea>
+      <button onclick="save()">Save</button>
+      <button onclick="recycle()">Re-Up</button>
+    </div>
+  </div>
+  <div id="debug"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+  <!--<script src="script.js"></script>-->
+</body>
+</html>
