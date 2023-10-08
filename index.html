@@ -2,7 +2,7 @@
 <html>
 <head>
   <title>Simple Notepad App</title>
-  <!--<link rel="stylesheet" type="text/css" href="styles.css">-->
+  <link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
   <div id="app">
@@ -10,7 +10,16 @@
       <input id="load-name" type="text" placeholder="File Name">
       <input id="load-pass" type="password" placeholder="Pass">
       <button onclick="load(loadName.value,loadPass.value)">Load</button>
-      <button onclick="button()">BUTTON</button>
+      <button onclick="downloadContent()">Download</button>
+      <button onclick="uploadContent()">Upload</button>
+      <button onclick="resetText()">RESET</button>
+      <details id="user-code-section">
+        <summary>
+          <h1>User Code</h1>
+        </summary>
+        <textarea id="user-code" placeholder="Enter your custom code here..."></textarea>
+        <button onclick="eval(document.getElementById('user-code').value)">(DANGER)Run</button>
+      </details>
       <textarea id="main-pad" placeholder="Your notes here..."></textarea>
     </div>
     <details id="graph-section">
@@ -43,6 +52,6 @@
   </div>
   <div id="debug"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
-  <!--<script src="script.js"></script>-->
+  <script src="script.js"></script>
 </body>
 </html>

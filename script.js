@@ -8,6 +8,7 @@ const searchQuery = document.getElementById('search-query');
 const fragmentResults = document.getElementById('fragment-results');
 const finalPad = document.getElementById('final-pad');
 const graphQuery = document.getElementById('graph-query');
+const tempPad = document.getElementById("temp-pad");
 const graphResults = document.getElementById('graph-results');
 const loadName = document.getElementById('load-name');
 const loadPass = document.getElementById('load-pass');
@@ -134,6 +135,7 @@ function extractMetadata(note) {
           split(' ').
           filter(Boolean);
       }
+      metadata.content = note.substring(matches[0].length).trim();
     }
     else {
       1;//console.log('NB');
@@ -145,6 +147,7 @@ function extractMetadata(note) {
     if (matches) {
       //console.log('YS');
       add='trispc';
+      metadata.content = note.substring(matches[0].length).trim();
       //console.log(JSON.stringify(matches));
     }
     else {
@@ -254,10 +257,11 @@ function addNoteToSearchResults(noteLines, hidden, lines) {
   // Adjust the textarea height to fit its content
   adjustTextareaHeight(textarea);
 }
-function resetText(u=true,d=true,t=true) {
+function resetText(u=true,d=true,t=true,q=true) {
   if (u) mainPad.value='';
   if (d) fragmentResults.innerHTML = '';
   if (t) finalPad.value = '';
+  if (q) cloud = new ProtectedTextApi(" "," "), loadName.value = loadPass.value = '';
 }
 function combineFragments() {
   debuglog('combining text');
@@ -304,6 +308,40 @@ async function load(name, pass) {
   mainPad.value=cloud.view();
   debuglog('changedtext');  
 }
+function downloadContent() {
+  const content = document.getElementById('main-pad').value;
+  const blob = new Blob([content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const loadNameValue = document.getElementById('load-name').value;
+  const d = new Date();
+  const timestamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+  a.download = loadNameValue ? `${loadNameValue}_${timestamp}.txt` : 'download.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+function uploadContent() {
+  // Create a temporary file input element
+  const tempInput = document.createElement('input');
+  tempInput.type = 'file';
+  tempInput.onchange = function(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        // Populate the textarea with the file content
+        document.getElementById('main-pad').value = e.target.result;
+      };
+      reader.readAsText(file);
+    }
+    // Clean up: remove the temporary input after use
+    tempInput.remove();
+  };
+  // Trigger the file input to open the file dialog
+  tempInput.click();
+}
+
 //async function load_emnolope2() {
 //  load("emnolope2","   ");
 //}
