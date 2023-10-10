@@ -257,7 +257,7 @@ function addNoteToSearchResults(noteLines, hidden, lines) {
   // Adjust the textarea height to fit its content
   adjustTextareaHeight(textarea);
 }
-function resetText(u=true,d=true,t=true,q=true) {
+function resetText(u,d,t,q) {
   if (u) mainPad.value='';
   if (d) fragmentResults.innerHTML = '';
   if (t) finalPad.value = '';
@@ -361,7 +361,7 @@ function save() {
 }
 function recycle() {
   mainPad.value=finalPad.value;
-  resetText(0,1,1);
+  resetText(0,1,1,0);
 }
 async function extractTags(query="") {
   const querys = query.split(" ");
