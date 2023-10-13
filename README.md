@@ -1,8 +1,6 @@
 # Slab2d
 
-### Turns your vlusterfuck brain into a linear
-
-
+### Turns your clusterfuck brain into a linear form. Like Roam Research but a bootleg ripoff.
 
 ## Creator
 #### Backend
@@ -10,4 +8,8 @@ will be god awful PT interface, for now...
 should require minimal front end modification
 
 #### Frontend
-React.js, because react three fiber, and because jobs
+Front end framework React.js, because react three fiber, because jobs
+package manager ~npm~ bun
+bundler ~vite~ bun
+css franework tailwind
+language typescript
