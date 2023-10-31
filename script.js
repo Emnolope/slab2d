@@ -287,6 +287,21 @@ function combineFragmentsCram() {
     finalPad.value += visible[i].value + '\n';
   }
 }
+function combineFragmentsCramUp() {
+  debuglog('bunching text');
+  finalPad.value = ''; // Clear the textarea
+  //???
+  var fragmentResults = document.getElementById('fragment-results');
+  var textareas = fragmentResults.getElementsByTagName('textarea');
+  const visible = Array.from(textareas).filter(textarea => window.getComputedStyle(textarea).display !== 'none');
+  const hidden = Array.from(textareas).filter(textarea => window.getComputedStyle(textarea).display === 'none');
+  for (var i = 0; i < visible.length; i++) {
+    finalPad.value += visible[i].value + '\n';
+  }
+  for (var i = 0; i < hidden.length; i++) {
+    finalPad.value += hidden[i].value + '\n';
+  }
+}
 // Function to parse a search query into an AST
 function parseQuery(query) {
   // Split the query into words
