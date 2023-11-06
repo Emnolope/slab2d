@@ -214,7 +214,7 @@ function adjustTextareaHeight(textarea) {
   //debuglog('adj');
 }
 function graphSearch(query) {
-  let [lines,results]=searchText("tgm tagmeta");
+  let [lines,results]=searchText("tag");
   results=results.filter(([currentNote,hidden])=>!hidden);
   results=results.map(([currentNote,hidden])=>currentNote);
   results=results.map(linens=>linens.map(linen=>lines[linen]).join('\n')).join('\n');
