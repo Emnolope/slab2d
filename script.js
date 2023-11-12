@@ -305,15 +305,23 @@ function combineFragmentsCramUp() {
 // Function to parse a search query into an AST
 function parseQuery(query) {
   // Split the query into words
-  let words = query.split(' ').filter(Boolean);;
+  let words = query.split(' ').filter(Boolean);
   // Convert the words to lowercase and return them as tags
   let tags = words.map(word => word.toLowerCase());
-  return tags;
+  let normal=[], pos=[], neg=[];
+  tags.forEach(item => {
+    if (item.startsWith('-')) neg.push(item.slice(1));
+    else if (item.startsWith('+')) pos.push(item.slice(1))
+    else normal.push(item);
+  });
+  return {normal, pos, neg};
 }
 // Function to evaluate an AST against a note
 function evaluateAst(ast, note, metadata) {
   // Check if all tags in the AST are included in the note's metadata tags
-  return ast.some(tag => metadata.tags.includes(tag));
+  return ast.normal.some(tag => metadata.tags.includes(tag)) && 
+         !ast.neg.some(tag => metadata.tags.includes(tag)) &&
+         ast.pos.every(tag => metadata.tags.includes(tag));
 }
 async function load(name, pass) {
   cloud=new ProtectedTextApi(name,pass);
