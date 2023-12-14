@@ -1,6 +1,7 @@
+const debugDiv = document.getElementById('debug');
 function debuglog(message) {
-  var debugDiv = document.getElementById('debug');
-  debugDiv.textContent += JSON.stringify(message) + '\r\n';
+  let append = (typeof message === 'string') ? (message) : JSON.stringify(message);
+  debugDiv.textContent += append + '\r\n';
 }
 debuglog('program start');
 const mainPad = document.getElementById('main-pad');
@@ -13,6 +14,9 @@ const graphResults = document.getElementById('graph-results');
 const loadName = document.getElementById('load-name');
 const loadPass = document.getElementById('load-pass');
 const searchSingleton = document.getElementById('search-singleton');
+const chatPad = document.getElementById('chat-pad');
+const chatKey = document.getElementById('chat-key');
+
 class ProtectedTextApi {
   constructor(site_id, passwd) {
     this.siteHash = CryptoJS.SHA512("/" + site_id).toString();
@@ -415,8 +419,63 @@ function searchGraph(term, input) {
   let matchingEdges = allEdges.map(edge=>edge[0]+' '+edge[2]).filter(edge => terms.some(t => edge.includes(t)));
   return matchingEdges.join(' ')+'\n'+matchingEdges2;
 }
-
-
+function chatReply(prompt, useGPT4 = false) {
+  //debuglog('Prompt:', prompt);
+  if (!chatPad || !chatKey) {
+    debuglog('Error: chatPad or chatKey is null');
+    return;
+  }
+  debuglog("Thinking...")
+  //debuglog('Chat Key:')
+  //debuglog(chatKey.value);
+  return new Promise((resolve, reject) => {
+    let url = 'https://api.openai.com/v1/chat/completions';
+    let model = useGPT4 ? 'gpt-4-1106-preview' : 'gpt-3.5-turbo-1106';
+    let body = JSON.stringify({
+      'model': model,
+      'messages': [{
+        'role': 'system',
+        'content': 'You are a helpful assistant.'
+      }, {
+        'role': 'user',
+        'content': prompt
+      }],
+      'max_tokens': 2048
+    });
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${chatKey.value}`
+      },
+      body: body
+    })
+    .then(response => {
+      //debuglog('Response Status:');
+      //debuglog(response.status);
+      //debuglog('Response OK:')
+      //debuglog(response.ok);
+      return response.json();
+    })
+    .then(data => {
+      //debuglog('Data:');
+      //debuglog(JSON.stringify(data, null, 2));
+      debuglog("Hey human!");
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        debuglog('Error: data.choices is undefined');
+        reject('Error: Unexpected API response');
+      } else {
+        let reply = data.choices[0].message.content;
+        resolve(reply);
+      }
+    })
+    .catch(error => {
+      debuglog('Fetch Error:');
+      debuglog(error);
+      reject('Error!');
+    });
+  });
+}
 
 
 
