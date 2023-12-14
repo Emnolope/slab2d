@@ -335,12 +335,14 @@ async function load(name, pass) {
   mainPad.value=cloud.view();
   debuglog('changedtext');  
 }
-const urlParams = new URLSearchParams(window.location.search);
-[loadName.value, loadPass.value] = [urlParams.get('o'), urlParams.get('t')];
-if (loadName.value && loadPass.value) {
-  load(loadName.value,loadPass.value);
-} 
-
+function loadParameters() {
+  const urlParams = new URLSearchParams(window.location.search);
+  [loadName.value, loadPass.value] = [urlParams.get('o'), urlParams.get('t')];
+  if (loadName.value && loadPass.value) {
+    load(loadName.value, loadPass.value);
+  }
+  chatKey.value = urlParams.get('a');
+} loadParameters();
 function downloadContent() {
   const content = document.getElementById('main-pad').value;
   const blob = new Blob([content], { type: 'text/plain' });
