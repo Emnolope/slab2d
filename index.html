@@ -4,6 +4,7 @@
   <title>Simple Notepad App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" type="text/css" href="styles.css">
+  <link rel="manifest" href='data:application/manifest+json,{"display": "fullscreen"}'/>
 </head>
 <body>
   <div id="app">
@@ -31,6 +32,15 @@
       <input id="graph-query" type="text" placeholder="Search tag relations">
       <button onclick="graphSearch(graphQuery.value)">Search Graph</button>
       <textarea id="graph-results"></textarea>
+    </details>
+    <details id="chat-section">
+      <summary>
+        <h1>Secretary</h1>
+      </summary>
+     <textarea id="chat-pad">[SYSTEM] You are a helpful assistant.</textarea>
+     <button onclick="chatReply(chatPad.value, smartCheckbox.checked).then(reply=>chatPad.value+='\n'+reply);">Hey GPT</button>
+     <input type="checkbox" id="smartCheckbox"> Smart
+     <input id="chat-key" type="password" placeholder="ChatGPT API key">
     </details>
     <div id="search-section">
       <input id="search-query" type="text" placeholder="Search tags...">
