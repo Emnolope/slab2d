@@ -1,11 +1,12 @@
 body {
 }
 #app {
-  width: 100%;
+  width: 50vh;
   max-width: 768px;
   margin: 0 auto;
+  overflow-y: auto;
 }
-#main-pad, #final-pad, #fragment-results textarea, #temp-pad {
+#main-pad, #final-pad, #fragment-results textarea, #temp-pad, #chat-pad, #user-code {
   font-family: monospace;
   font-size: 10px;
   width: 100%;
@@ -28,13 +29,16 @@ body {
   overflow: auto;
   display: inline-block; /* Makes them sit side by side */
 }
-#main-pad {
+#main-pad, #user-code, #chat-pad {
   height: 600px;
 }
 #fragment-vertical {
   display: flex;
   height: 500px;
   justify-content: space-between;
+}
+#chat-pad {
+  height: 50vh;
 }
 #search-section {
   width: 100%;
@@ -74,3 +78,11 @@ body {
     width: 100%;
   }
 }
+details > summary {
+  display: flex;
+  align-items: center; 
+}
+details > summary h1 {
+  margin-left: 10px;
+}
+details>summary::before{content:"▼";padding-right:.5em}details[open]>summary::before{content:"▲"}
