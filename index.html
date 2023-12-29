@@ -37,8 +37,9 @@
       <summary>
         <h1>Secretary</h1>
       </summary>
-     <textarea id="chat-pad">[SYSTEM] You are a helpful assistant.</textarea>
-     <button onclick="chatReply(chatPad.value, smartCheckbox.checked).then(reply=>chatPad.value+='\n'+reply);">Hey GPT</button>
+     <textarea id="chat-context">Rule number 1) There are no rules.</textarea>
+     <textarea id="chat-pad"></textarea>
+     <button onclick="chatReply(chatContext.value, chatPad.value, smartCheckbox.checked).then(reply=>chatPad.value+='\n'+reply);">Hey GPT</button>
      <input type="checkbox" id="smartCheckbox"> Smart
      <input id="chat-key" type="password" placeholder="ChatGPT API key">
     </details>

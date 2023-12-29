@@ -6,7 +6,7 @@ body {
   margin: 0 auto;
   overflow-y: auto;
 }
-#main-pad, #final-pad, #fragment-results textarea, #temp-pad, #chat-pad, #user-code {
+#main-pad, #final-pad, #fragment-results textarea, #temp-pad, #chat-context, #chat-pad, #user-code {
   font-family: monospace;
   font-size: 10px;
   width: 100%;
@@ -29,12 +29,15 @@ body {
   overflow: auto;
   display: inline-block; /* Makes them sit side by side */
 }
-#main-pad, #user-code, #chat-pad {
-  height: 600px;
+#main-pad {
+  height: 50vh;
+}
+#user-code, #chat-context {
+  height: 25vh;
 }
 #fragment-vertical {
   display: flex;
-  height: 500px;
+  height: 85vh;
   justify-content: space-between;
 }
 #chat-pad {
@@ -85,4 +88,8 @@ details > summary {
 details > summary h1 {
   margin-left: 10px;
 }
-details>summary::before{content:"▼";padding-right:.5em}details[open]>summary::before{content:"▲"}
+details>summary::before{content:"▼";padding-right:.5em}
+details[open]>summary::before{content:"▲"}
+h1 {
+  margin: 0;
+}

@@ -14,8 +14,31 @@ const graphResults = document.getElementById('graph-results');
 const loadName = document.getElementById('load-name');
 const loadPass = document.getElementById('load-pass');
 const searchSingleton = document.getElementById('search-singleton');
-const chatPad = document.getElementById('chat-pad');
+const chatContext =document.getElementById('chat-context');
+const chatPad = document.getElementById('chat-pad');//REFACTOR THIS TO CHATCONTENT CAUSE IT RHYMES
 const chatKey = document.getElementById('chat-key');
+mainPad.value = `
+||user|Type in pet dog and cat in tag search
+
+
+
+
+
+
+||pet dog cat|bowls
+||pet dog|bark
+||pet cat|meow
+||pet|
+there are people who keep pet tigers and pet bats and pet elephants
+||star|someone who's famous
+||cat star|Taiga, Catwoman
+||dog star|Snoop Dogg
+||cat star|Garfield
+||cat|La Fea Rosa
+she's my cousin's cat she used to be so small but now she's all grown up
+||cat star|Black Panther
+||dog star|Snoopy
+`
 
 class ProtectedTextApi {
   constructor(site_id, passwd) {
@@ -421,7 +444,7 @@ function searchGraph(term, input) {
   let matchingEdges = allEdges.map(edge=>edge[0]+' '+edge[2]).filter(edge => terms.some(t => edge.includes(t)));
   return matchingEdges.join(' ')+'\n'+matchingEdges2;
 }
-function chatReply(prompt, useGPT4 = false) {
+function chatReply(context, prompt, useGPT4 = false) {
   //debuglog('Prompt:', prompt);
   if (!chatPad || !chatKey) {
     debuglog('Error: chatPad or chatKey is null');
@@ -437,7 +460,7 @@ function chatReply(prompt, useGPT4 = false) {
       'model': model,
       'messages': [{
         'role': 'system',
-        'content': 'You are a helpful assistant.'
+        'content': context
       }, {
         'role': 'user',
         'content': prompt
