@@ -51,7 +51,7 @@ class ProtectedTextApi {
   }
   async loadTabs() {
     //const url = `https://api.allorigins.win/raw?url=` + `${this.endpoint}?action=getJSON`;
-    const url = 'https://corsproxy.io/?' + encodeURIComponent(`${this.endpoint}?action=getJSON`);
+    const url = 'https://corsproxy.io/?' + encodeURIComponent(`${this.endpoint}?action=getJSON&dummy=${Date.now()}`);
     const response = await fetch(url);
     this.siteObj = await response.json();
     this.dbversion = this.siteObj['currentDBVersion'];
