@@ -6,7 +6,7 @@ body {
   margin: 0 auto;
   overflow-y: auto;
 }
-#main-pad, #final-pad, #fragment-results textarea, #temp-pad, #chat-context, #chat-pad, #user-code {
+#main-pad, #final-pad, #fragment-results textarea, #temp-pad, #chat-context, #chat-pad, #user-code, #graph-results {
   font-family: monospace;
   font-size: 10px;
   width: 100%;
@@ -32,7 +32,7 @@ body {
 #main-pad {
   height: 50vh;
 }
-#user-code, #chat-context {
+#user-code, #chat-context, #graph-results {
   height: 25vh;
 }
 #fragment-vertical {
