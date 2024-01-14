@@ -15,13 +15,6 @@
       <button onclick="downloadContent()">Download</button>
       <button onclick="uploadContent()">Upload</button>
       <button onclick="resetText(1,1,1,1)">RESET</button>
-      <details id="user-code-section">
-        <summary>
-          <h1>User Code</h1>
-        </summary>
-        <textarea id="user-code" placeholder="Enter your custom code here..."></textarea>
-        <button onclick="eval(document.getElementById('user-code').value)">(DANGER)Run</button>
-      </details>
       <textarea id="main-pad" placeholder="Your notes here..."></textarea>
     </div>
     <details id="graph-section">
@@ -43,6 +36,13 @@
      <input type="checkbox" id="smartCheckbox"> Smart
      <input id="chat-key" type="password" placeholder="ChatGPT API key">
     </details>
+    <details id="user-code-section">
+        <summary>
+          <h1>User Code</h1>
+        </summary>
+        <textarea id="user-code" placeholder="Enter your custom code here..."></textarea>
+        <button onclick="eval(document.getElementById('user-code').value)">(DANGER)Run</button>
+      </details>
     <div id="search-section">
       <input id="search-query" type="text" placeholder="Search tags...">
       <button onclick="searchNotesAndDisplay()">Go!</button>

@@ -162,7 +162,7 @@ function extractMetadata(note) {
           split(' ').
           filter(Boolean);
       }
-      metadata.content = note.substring(matches[0].length).trim();
+      metadata.content = note.substring(matches[0].length);
     }
     else {
       1;//console.log('NB');
@@ -174,7 +174,7 @@ function extractMetadata(note) {
     if (matches) {
       //console.log('YS');
       add='trispc';
-      metadata.content = note.substring(matches[0].length).trim();
+      metadata.content = note.substring(matches[0].length);
       //console.log(JSON.stringify(matches));
     }
     else {
@@ -182,6 +182,8 @@ function extractMetadata(note) {
     }
   }
   metadata.tags = metadata.tags.map(tag => tag.toLowerCase());
+  metadata.tags = metadata.tags.map(s=>
+                                    ((idx=>idx===-1?[s,'']:[s.slice(0,idx),s.slice(idx)])(s.indexOf('_',1)))[0])
   metadata.tags=metadata.tags.filter(Boolean);
   /*if (metadata.tags.length) {
     debuglog(metadata.tags);
@@ -436,7 +438,217 @@ async function extractTags(query="") {
   }
   graphResults.value=[...uniqueTags].join(' ');
 }
-function simplifyGraphLang(e){let t=e,l=[],i,s,n,r,f=()=>{i=null,s=null,n=null,r=!1};for(f(),t.includes(`\n`)&&(l=e.split(`\n`).flatMap(simplifyGraphLang),t="");t;){if([token,t]=tapeEater(t),token===[]||","===token){f();continue}if(Array.isArray(token)){if(i||n||s){if(i&&n&&!s)s=token;else if(!i&&n&&!s&&r)s=token;else{f();continue}}else i=token}else if("<>=~-".includes(token)){if(i||n||s){if(!i||n||s){f();continue}n=token}else if("=-".includes(token))n=token,r=!0;else{f();continue}}else{f();continue}{let u=!1;if(i&&n&&s)for(let h of(u=!0,i))for(let c of s)"~"===n?!"'\"".includes(h.charAt(0))&&"'\"".includes(c.charAt(0))?l.push([h,"~",c]):"'\"".includes(h.charAt(0))&&!"'\"".includes(c.charAt(0))&&l.push([c,"~",h]):"<"===n?l.push([c,">",h]):">"===n?l.push([h,">",c]):"<>=~-".includes(n)&&l.push([h,n,c]);else if((!i&&n&&s||i&&n&&!s&&""===t.split(",")[0].trim())&&(u=!0,"=-".includes(n))){let a=r?s:i;if("="===n){let o=r?a[0]:a[a.length-1];for(let $ of a)l.push([o,n,$])}if("-"===n)for(let p=0;p<a.length;p++)for(let _=p;_<a.length;_++)l.push([a[p],n,a[_]])}if(u){let g=s;f(),i=g,u=!1}}}return l}function tapeEater(e){let t=/^[a-zA-Z0-9]+|\[.+\]$/,l,i=e.trim();for(let[s,n]of[["[","]"],['"','"'],["'","'"]])if(i.startsWith(s)){let r=i.indexOf(n,1);return -1===r?(l=[],i=""):(l=i.slice(0,r+1),i=i.slice(r+1)),[l=[l],i]}if(i.startsWith("(")){let f=[];for(i=i.slice(1);!i.startsWith(")")&&!i.startsWith(",")&&i.length>0;){let u;[u,i]=tapeEater(i),f.push(u)}if(0===i.length)return[[],""];l=f.filter(e=>Array.isArray(e)&&1===e.length&&"string"==typeof e[0]&&e[0].length>0&&t.test(e[0])),i=i.slice(1)}else{let h=i.match(/^\s*([a-zA-Z0-9]+|\[.+\]|\S)/);if(!h)return["",i];l=h[1],i=i.slice(h[0].length),t.test(l)&&(l=[l])}return[l,i]}
+function simplifyGraphLang(input) {
+  let tape = input;
+  let pancake = [];
+  let operators = `<>=~-`;
+  let prepostfix = `=-`;
+  let left;   //for tokens, groups, or quotes
+  let right;  //for tokens, groups, or quotes
+  let center; //for operators
+  let prefixflag;
+  const reset = () => {
+    left = null;
+    right = null;
+    center = null;
+    prefixflag = false;
+  }
+  reset();
+  //if multiline, split and recurse
+  if (tape.includes(`\n`)) {
+    pancake = input.split(`\n`).flatMap(simplifyGraphLang);
+    tape = '';
+  }
+  while (tape) {
+    [token, tape] = tapeEater(tape);
+    //error is [] empty array
+    //tags are [a b] array, even singles, even comments, even brackets
+    //operators are "?" character
+    if (token===[] || token===`,`) {
+      reset(); continue;
+    }
+    //handle tags
+    if(Array.isArray(token)) {
+      if (!left && !center && !right) {
+        left = token;
+      }
+      else if (!!left && !!center && !right) {
+        right = token;
+      }
+      else if (!left && !!center && !right && prefixflag) {
+        right = token;
+      }
+      else {
+        reset(); continue;
+      }
+    }
+    //handle operator
+    else if (operators.includes(token)) {
+    //else if (typeof obj === 'string' && token.length === 1 && operators.includes(token)) {
+    //else if (operators.includes(token) && token.length === 1) {
+      if (!left && !center && !right) {
+        if (prepostfix.includes(token)) {
+          center = token;
+          prefixflag = true;
+        }
+        else {
+          reset(); continue;
+        }
+      }
+      else if (!!left && !center && !right) {
+        center = token;
+      }
+      else {
+        reset(); continue;
+      }
+    }
+    else {
+      reset(); continue;
+    }
+    //simplify phase
+    if ("simplify") {
+      let shifter=false;
+      if (!!left && !!center && !!right) {
+        shifter=true;
+        for (let l of left) {
+          for (let r of right) {
+          //PROCESS ~
+            if (center === `~`) {
+              if (!`'"`.includes(l.charAt(0)) && `'"`.includes(r.charAt(0))) {
+                pancake.push([l,`~`,r]);
+              }
+              else if (`'"`.includes(l.charAt(0)) && !`'"`.includes(r.charAt(0))) {
+                pancake.push([r,`~`,l]);
+              }
+            }
+            //PROCESS <>
+            else if (center === `<`) {
+              pancake.push([r,`>`,l]);
+            }
+            else if (center === `>`) {
+              pancake.push([l,`>`,r]);
+            }
+            //PROCESS EVERYTHING ELSE
+            else if (`<>=~-`.includes(center)) {
+              pancake.push([l,center,r]);
+            }
+            else {
+              ;
+            }
+          }
+        }
+      }
+      else if ((!left && !!center && !!right) ||
+       (!!left && !!center && !right && tape.split(`,`)[0].trim()===``))
+      {
+        shifter=true;
+        if (prepostfix.includes(center)) {
+          let process = prefixflag ? right : left;
+          //PROCESS =
+          if (center === '=') {
+            let main = prefixflag ? process[0] : process[process.length - 1];
+            for (let thing of process) {
+              pancake.push([main,center,thing]);
+            }
+          }
+          //PROCESS -
+          if (center === '-') {
+            for (let i = 0; i < process.length; i++) {
+              for (let j = i; j < process.length; j++) {
+                pancake.push([process[i],center,process[j]]);
+              }
+            }
+          }
+        }
+      }
+      // SHIFTING PHASE
+      // shift right to left, with all else clear
+      if (shifter) {
+        let temp = right;
+        reset();
+        left = temp;
+        shifter=false;
+      }
+    }
+  }
+  //console.log('pancake:', pancake); // Added console.log
+  return pancake;
+}
+function tapeEater(tape) {
+  // match tags, single char operator
+  const tagOperatorRegex = /^\s*([a-zA-Z0-9]+|\[.+\]|\S)/;
+  const tagRegex = /^[a-zA-Z0-9]+|\[.+\]$/;
+  let token;
+  let restOfTape = tape.trim();
+  // Define enclosure pairs
+  const enclosures = [['[', ']'], ['"', '"'], ["'", "'"]];
+  // Enclosure capture mode
+  for (let [open, close] of enclosures) {
+    if (restOfTape.startsWith(open)) {
+      let endIndex = restOfTape.indexOf(close, 1);
+      if (endIndex === -1) {
+        // If no closing enclosure is found, return error and clear tape
+        token = [];
+        restOfTape = '';
+      } else {
+        // If a closing enclosure is found, grab the enclosure, cut at end
+        token = restOfTape.slice(0, endIndex + 1);
+        restOfTape = restOfTape.slice(endIndex + 1);
+      }
+      token=[token];
+      return [token, restOfTape];  // Return early if an enclosure was found
+    }
+  }
+  // Parentheses capture mode
+  if (restOfTape.startsWith('(')) {
+    let groupTokens = [];
+    restOfTape = restOfTape.slice(1); // Remove the opening parenthesis
+    while (!restOfTape.startsWith(')') && !restOfTape.startsWith(',') && restOfTape.length > 0) {
+      let newToken;
+      [newToken, restOfTape] = tapeEater(restOfTape);
+      groupTokens.push(newToken);
+    }
+    if (restOfTape.length === 0) {
+      return [[], ''];
+    }
+    token = groupTokens.filter(
+      token => Array.isArray(token) &&
+      token.length === 1 &&
+      typeof token[0] === 'string' &&
+      token[0].length > 0 &&
+      tagRegex.test(token[0])
+    );
+    restOfTape = restOfTape.slice(1); // Remove the closing parenthesis or comma
+  }
+  // Normal mode
+  else {
+    const match = restOfTape.match(tagOperatorRegex);
+    if (match) {
+      token = match[1];
+      restOfTape = restOfTape.slice(match[0].length);
+      if (tagRegex.test(token)) {
+        token = [token];
+      }
+    } else {
+      return ['', restOfTape];
+    }
+  }
+  return [token, restOfTape];
+}
+function replaceFragmentsTag(search, replace = '') {
+  console.log(`Replacing tag: ${search} with ${replace}`);
+  const fragmentResults = document.getElementById('fragment-results');
+  const textareas = fragmentResults.getElementsByTagName('textarea');
+  Array.from(textareas).filter(textarea => window.getComputedStyle(textarea).display !== 'none').forEach(textarea => {
+    const metadata = extractMetadata(textarea.value);
+    if (search) {
+      metadata.tags = metadata.tags
+        .map(tag => (tag === search ? replace : tag))
+        .filter(Boolean);
+    }
+    textarea.value = `|${metadata.date || ''}|${metadata.tags.join(' ')||''}|${metadata.content}`;
+  });
+}
 function searchGraph(term, input) {
   let allEdges = simplifyGraphLang(input);
   let terms = term.split(" ");
