@@ -242,15 +242,6 @@ function adjustTextareaHeight(textarea) {
   textarea.style.height = textarea.scrollHeight + 'px';
   //debuglog('adj');
 }
-function graphSearch(query) {
-  let [lines,results]=searchText("tag");
-  results=results.filter(([currentNote,hidden])=>!hidden);
-  results=results.map(([currentNote,hidden])=>currentNote);
-  results=results.map(linens=>linens.map(linen=>lines[linen]).join('\n')).join('\n');
-  if (query!=="")
-    results=searchGraph(query,results);
-  graphResults.value=results;
-}
 function debounceAndThrottle(func, debounceDelay, throttleDelay) {
   var timeoutId;
   var lastRun = 0;
@@ -422,21 +413,6 @@ function save() {
 function recycle() {
   mainPad.value=finalPad.value;
   resetText(0,1,1,0);
-}
-async function extractTags(query="") {
-  const querys = query.split(" ");
-  debuglog(querys);
-  const lines = mainPad.value.split('\n');
-  const uniqueTags = new Set();
-  for (const line of lines) {
-    const metadata = extractMetadata(line);
-    if (!query || querys.some(aquery => metadata.tags.includes(aquery))) {
-      for (const tag of metadata.tags) {
-        uniqueTags.add(tag);
-      }
-    }
-  }
-  graphResults.value=[...uniqueTags].join(' ');
 }
 function simplifyGraphLang(input) {
   let tape = input;
@@ -635,6 +611,37 @@ function tapeEater(tape) {
   }
   return [token, restOfTape];
 }
+function graphSearch(query) {
+  let [lines,results]=searchText("tag");
+  results=results.filter(([currentNote,hidden])=>!hidden);
+  results=results.map(([currentNote,hidden])=>currentNote);
+  results=results.map(linens=>linens.map(linen=>lines[linen]).join('\n')).join('\n');
+  if (query!=="")
+    results=searchGraph(query,results);
+  graphResults.value=results;
+}
+function searchGraph(term, input) {
+  let allEdges = simplifyGraphLang(input);
+  let terms = term.split(" ");
+  let matchingEdges2 = allEdges.map(edge=>edge.join('')).filter(edge => terms.some(t => edge.includes(t))).join(' ');
+  let matchingEdges = allEdges.map(edge=>edge[0]+' '+edge[2]).filter(edge => terms.some(t => edge.includes(t)));
+  return matchingEdges.join(' ')+'\n'+matchingEdges2;
+}
+async function extractTags(query="") {
+  const querys = query.split(" ");
+  debuglog(querys);
+  const lines = mainPad.value.split('\n');
+  const uniqueTags = new Set();
+  for (const line of lines) {
+    const metadata = extractMetadata(line);
+    if (!query || querys.some(aquery => metadata.tags.includes(aquery))) {
+      for (const tag of metadata.tags) {
+        uniqueTags.add(tag);
+      }
+    }
+  }
+  graphResults.value=[...uniqueTags].join(' ');
+}
 function replaceFragmentsTag(search, replace = '') {
   console.log(`Replacing tag: ${search} with ${replace}`);
   const fragmentResults = document.getElementById('fragment-results');
@@ -649,22 +656,16 @@ function replaceFragmentsTag(search, replace = '') {
     textarea.value = `|${metadata.date || ''}|${metadata.tags.join(' ')||''}|${metadata.content}`;
   });
 }
-function searchGraph(term, input) {
-  let allEdges = simplifyGraphLang(input);
-  let terms = term.split(" ");
-  let matchingEdges2 = allEdges.map(edge=>edge.join('')).filter(edge => terms.some(t => edge.includes(t))).join(' ');
-  let matchingEdges = allEdges.map(edge=>edge[0]+' '+edge[2]).filter(edge => terms.some(t => edge.includes(t)));
-  return matchingEdges.join(' ')+'\n'+matchingEdges2;
-}
 function chatReply(context, prompt, useGPT4 = false) {
-  //debuglog('Prompt:', prompt);
+  debuglog('Prompt:');
+  debuglog(prompt);
   if (!chatPad || !chatKey) {
     debuglog('Error: chatPad or chatKey is null');
     return;
   }
   debuglog("Thinking...")
-  //debuglog('Chat Key:')
-  //debuglog(chatKey.value);
+  debuglog('Chat Key:')
+  debuglog(chatKey.value);
   return new Promise((resolve, reject) => {
     let url = 'https://api.openai.com/v1/chat/completions';
     let model = useGPT4 ? 'gpt-4-1106-preview' : 'gpt-3.5-turbo-1106';
@@ -688,15 +689,15 @@ function chatReply(context, prompt, useGPT4 = false) {
       body: body
     })
     .then(response => {
-      //debuglog('Response Status:');
-      //debuglog(response.status);
-      //debuglog('Response OK:')
-      //debuglog(response.ok);
+      debuglog('Response Status:');
+      debuglog(response.status);
+      debuglog('Response OK:')
+      debuglog(response.ok);
       return response.json();
     })
     .then(data => {
-      //debuglog('Data:');
-      //debuglog(JSON.stringify(data, null, 2));
+      debuglog('Data:');
+      debuglog(JSON.stringify(data, null, 2));
       debuglog("Hey human!");
       if (!data.choices || !data.choices[0] || !data.choices[0].message) {
         debuglog('Error: data.choices is undefined');
