@@ -14,6 +14,7 @@ const graphResults = document.getElementById('graph-results');
 const loadName = document.getElementById('load-name');
 const loadPass = document.getElementById('load-pass');
 const searchSingleton = document.getElementById('search-singleton');
+const searchGraphWarp = document.getElementById('search-graph-warp');
 const chatContext =document.getElementById('chat-context');
 const chatPad = document.getElementById('chat-pad');//REFACTOR THIS TO CHATCONTENT CAUSE IT RHYMES
 const chatKey = document.getElementById('chat-key');
