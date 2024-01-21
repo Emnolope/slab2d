@@ -1,46 +1,34 @@
-const debugDiv = document.getElementById('debug');
-function debuglog(message) {
-  let append = (typeof message === 'string') ? (message) : JSON.stringify(message);
-  debugDiv.textContent += append + '\r\n';
-}
-debuglog('program start');
-const mainPad = document.getElementById('main-pad');
-const searchQuery = document.getElementById('search-query');
-const fragmentResults = document.getElementById('fragment-results');
-const finalPad = document.getElementById('final-pad');
-const graphQuery = document.getElementById('graph-query');
-const tempPad = document.getElementById("temp-pad");
-const graphResults = document.getElementById('graph-results');
-const loadName = document.getElementById('load-name');
-const loadPass = document.getElementById('load-pass');
-const searchSingleton = document.getElementById('search-singleton');
+const loadName =        document.getElementById('load-name');
+const loadPass =        document.getElementById('load-pass');
+const mainPad =         document.getElementById('main-pad');
+const graphQuery =      document.getElementById('graph-query');
+const graphResults =    document.getElementById('graph-results');
+const chatContext =     document.getElementById('chat-context');
+const chatPad =         document.getElementById('chat-pad'); //REFACTOR THIS TO CHATCONTENT CAUSE IT RHYMES
+const chatKey =         document.getElementById('chat-key');
+const searchQuery =     document.getElementById('search-query');
 const searchGraphWarp = document.getElementById('search-graph-warp');
-const chatContext =document.getElementById('chat-context');
-const chatPad = document.getElementById('chat-pad');//REFACTOR THIS TO CHATCONTENT CAUSE IT RHYMES
-const chatKey = document.getElementById('chat-key');
-mainPad.value = `
-||user|Type in pet dog and cat in tag search
+const searchSingleton = document.getElementById('search-singleton');
+const tempPad =         document.getElementById("temp-pad");
+const fragmentResults = document.getElementById('fragment-results');
+const finalPad =        document.getElementById('final-pad');
 
-
-
-
-
-
-||pet dog cat|bowls
-||pet dog|bark
-||pet cat|meow
-||pet|
-there are people who keep pet tigers and pet bats and pet elephants
-||star|someone who's famous
-||cat star|Taiga, Catwoman
-||dog star|Snoop Dogg
-||cat star|Garfield
-||cat|La Fea Rosa
-she's my cousin's cat she used to be so small but now she's all grown up
-||cat star|Black Panther
-||dog star|Snoopy
-`
-
+async function load(name, pass) { //Refactor for args
+  cloud=new ProtectedTextApi(name,pass);
+  debuglog(name);
+  await cloud.loadTabs();
+  debuglog('loadedtext');
+  mainPad.value=cloud.view();
+  debuglog('changedtext');  
+}
+function save() {
+  debuglog("Trying to save...");
+  if (finalPad.value == "") {
+    debuglog("text area empty, refusing to save");
+    return;
+  }
+  cloud.save(finalPad.value);
+}
 class ProtectedTextApi {
   constructor(site_id, passwd) {
     this.siteHash = CryptoJS.SHA512("/" + site_id).toString();
@@ -134,8 +122,88 @@ class ProtectedTextApi {
       CryptoJS.SHA512(content + this.passHash).toString() + this.dbversion
   }
 };
-let cloud=new ProtectedTextApi(" "," ");
-// Function to extract metadata from a note
+function uploadContent() {
+  // Create a temporary file input element
+  const tempInput = document.createElement('input');
+  tempInput.type = 'file';
+  tempInput.onchange = function(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        // Populate the textarea with the file content
+        document.getElementById('main-pad').value = e.target.result;
+      };
+      reader.readAsText(file);
+    }
+    // Clean up: remove the temporary input after use
+    tempInput.remove();
+  };
+  // Trigger the file input to open the file dialog
+  tempInput.click();
+}
+function downloadContent() {
+  const content = document.getElementById('main-pad').value;
+  const blob = new Blob([content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const loadNameValue = document.getElementById('load-name').value;
+  const d = new Date();
+  const timestamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+  a.download = loadNameValue ? `${loadNameValue}_${timestamp}.txt` : 'download.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+function recycle() {
+  mainPad.value=finalPad.value;
+  resetText(0,1,1,0);
+}
+function resetText(u,d,t,q) {
+  if (u) mainPad.value='';
+  if (d) fragmentResults.innerHTML = '';
+  if (t) finalPad.value = '';
+  if (q) cloud = new ProtectedTextApi(" "," "), loadName.value = loadPass.value = '';
+}
+function searchText(query) {
+  let results=[];
+  const lines = mainPad.value.split('\n');
+  //debuglog(lines);
+  // If search bar is empty, return
+  if (query === '') return;
+  // Initialize a variable to hold the current parent note
+  //var currentParentNote = null;
+  // Initialize a variable to hold the current note (parent or subnote)
+  var currentNote = [];
+  // Loop through each line
+  var hidden = true;
+  for (var i = 0; i < lines.length; i++) {
+    var metadata = extractMetadata(lines[i]);
+    // If the line contains the search text, add it to the search results
+    if (true) {
+      // If the note is a parent note (has a date or tags), update the current parent note
+      if (metadata.date || metadata.tags.length > 0) {
+        // If there's a current note left, add it to the search results
+        if (currentNote.length > 0) {
+          results.push([currentNote,hidden]);
+          //addNoteToSearchResults(currentNote,hidden,lines);
+        }
+        //currentParentNote = metadata;
+        hidden=!evaluateAst(parseQuery(query), lines[i], metadata)
+        currentNote = [i];
+      } else {
+        // If the line is a subnote, add it to the current note
+        currentNote.push(i);
+      }
+    }
+  }
+  // If there's a current note left, add it to the search results
+  if (currentNote.length > 0) {
+    results.push([currentNote,hidden]);
+    //addNoteToSearchResults(currentNote,hidden,lines);
+  }
+  return [lines,results];
+}
 function extractMetadata(note) {
   var metadata = {
     date: null,
@@ -191,45 +259,24 @@ function extractMetadata(note) {
   }*/
   return metadata;
 }
-// Function to search text in the notepad
-function searchText(query) {
-  let results=[];
-  const lines = mainPad.value.split('\n');
-  //debuglog(lines);
-  // If search bar is empty, return
-  if (query === '') return;
-  // Initialize a variable to hold the current parent note
-  //var currentParentNote = null;
-  // Initialize a variable to hold the current note (parent or subnote)
-  var currentNote = [];
-  // Loop through each line
-  var hidden = true;
-  for (var i = 0; i < lines.length; i++) {
-    var metadata = extractMetadata(lines[i]);
-    // If the line contains the search text, add it to the search results
-    if (true) {
-      // If the note is a parent note (has a date or tags), update the current parent note
-      if (metadata.date || metadata.tags.length > 0) {
-        // If there's a current note left, add it to the search results
-        if (currentNote.length > 0) {
-          results.push([currentNote,hidden]);
-          //addNoteToSearchResults(currentNote,hidden,lines);
-        }
-        //currentParentNote = metadata;
-        hidden=!evaluateAst(parseQuery(query), lines[i], metadata)
-        currentNote = [i];
-      } else {
-        // If the line is a subnote, add it to the current note
-        currentNote.push(i);
-      }
-    }
-  }
-  // If there's a current note left, add it to the search results
-  if (currentNote.length > 0) {
-    results.push([currentNote,hidden]);
-    //addNoteToSearchResults(currentNote,hidden,lines);
-  }
-  return [lines,results];
+function evaluateAst(ast, note, metadata) { //judge note against AST
+  // Check if all tags in the AST are included in the note's metadata tags
+  return ast.normal.some(tag => metadata.tags.includes(tag)) && 
+         !ast.neg.some(tag => metadata.tags.includes(tag)) &&
+         ast.pos.every(tag => metadata.tags.includes(tag));
+}
+function parseQuery(query) { //turn query into AST
+  // Split the query into words
+  let words = query.split(' ').filter(Boolean);
+  // Convert the words to lowercase and return them as tags
+  let tags = words.map(word => word.toLowerCase());
+  let normal=[], pos=[], neg=[];
+  tags.forEach(item => {
+    if (item.startsWith('-')) neg.push(item.slice(1));
+    else if (item.startsWith('+')) pos.push(item.slice(1))
+    else normal.push(item);
+  });
+  return {normal, pos, neg};
 }
 function searchNotesAndDisplay() {
   // Clear the search results
@@ -237,8 +284,21 @@ function searchNotesAndDisplay() {
   let [lines,results]=searchText(searchQuery.value);
   results.map(([currentNote,hidden])=>addNoteToSearchResults(currentNote,hidden,lines));
 }
-// Function to adjust the height of a textarea to fit its content
-function adjustTextareaHeight(textarea) {
+function addNoteToSearchResults(noteLines, hidden, lines) {
+  // Create a textarea for the note
+  var textarea = document.createElement('textarea');
+  textarea.value = noteLines.map(i => lines[i]).join('\n');
+  textarea.style.display = hidden ? 'none' : 'block';
+  // Adjust the textarea height whenever the user types
+  var adjustTextareaMod = debounceAndThrottle(adjustTextareaHeight, 50, 200);
+  textarea.oninput = function() {
+    adjustTextareaMod(textarea);
+  };
+  fragmentResults.appendChild(textarea);
+  // Adjust the textarea height to fit its content
+  adjustTextareaHeight(textarea);
+}
+function adjustTextareaHeight(textarea) { //fit textarea to content 
   textarea.style.height = 'auto';
   textarea.style.height = textarea.scrollHeight + 'px';
   //debuglog('adj');
@@ -263,26 +323,6 @@ function debounceAndThrottle(func, debounceDelay, throttleDelay) {
       scheduled = false;
     }, debounceDelay);
   };
-}
-function addNoteToSearchResults(noteLines, hidden, lines) {
-  // Create a textarea for the note
-  var textarea = document.createElement('textarea');
-  textarea.value = noteLines.map(i => lines[i]).join('\n');
-  textarea.style.display = hidden ? 'none' : 'block';
-  // Adjust the textarea height whenever the user types
-  var adjustTextareaMod = debounceAndThrottle(adjustTextareaHeight, 50, 200);
-  textarea.oninput = function() {
-    adjustTextareaMod(textarea);
-  };
-  fragmentResults.appendChild(textarea);
-  // Adjust the textarea height to fit its content
-  adjustTextareaHeight(textarea);
-}
-function resetText(u,d,t,q) {
-  if (u) mainPad.value='';
-  if (d) fragmentResults.innerHTML = '';
-  if (t) finalPad.value = '';
-  if (q) cloud = new ProtectedTextApi(" "," "), loadName.value = loadPass.value = '';
 }
 function combineFragments() {
   debuglog('combining text');
@@ -323,97 +363,36 @@ function combineFragmentsCramUp() {
     finalPad.value += hidden[i].value + '\n';
   }
 }
-// Function to parse a search query into an AST
-function parseQuery(query) {
-  // Split the query into words
-  let words = query.split(' ').filter(Boolean);
-  // Convert the words to lowercase and return them as tags
-  let tags = words.map(word => word.toLowerCase());
-  let normal=[], pos=[], neg=[];
-  tags.forEach(item => {
-    if (item.startsWith('-')) neg.push(item.slice(1));
-    else if (item.startsWith('+')) pos.push(item.slice(1))
-    else normal.push(item);
-  });
-  return {normal, pos, neg};
+function searchGraph(term, input) {
+  let allEdges = simplifyGraphLang(input);
+  let terms = term.split(" ");
+  let matchingEdges2 = allEdges.map(edge=>edge.join('')).filter(edge => terms.some(t => edge.includes(t))).join(' ');
+  let matchingEdges = allEdges.map(edge=>edge[0]+' '+edge[2]).filter(edge => terms.some(t => edge.includes(t)));
+  return matchingEdges.join(' ')+'\n'+matchingEdges2;
 }
-// Function to evaluate an AST against a note
-function evaluateAst(ast, note, metadata) {
-  // Check if all tags in the AST are included in the note's metadata tags
-  return ast.normal.some(tag => metadata.tags.includes(tag)) && 
-         !ast.neg.some(tag => metadata.tags.includes(tag)) &&
-         ast.pos.every(tag => metadata.tags.includes(tag));
-}
-async function load(name, pass) {
-  cloud=new ProtectedTextApi(name,pass);
-  debuglog(name);
-  await cloud.loadTabs();
-  debuglog('loadedtext');
-  mainPad.value=cloud.view();
-  debuglog('changedtext');  
-}
-function loadParameters() {
-  const urlParams = new URLSearchParams(window.location.search);
-  [loadName.value, loadPass.value] = [urlParams.get('o'), urlParams.get('t')];
-  if (loadName.value && loadPass.value) {
-    load(loadName.value, loadPass.value);
-  }
-  chatKey.value = urlParams.get('a');
-} loadParameters();
-function downloadContent() {
-  const content = document.getElementById('main-pad').value;
-  const blob = new Blob([content], { type: 'text/plain' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  const loadNameValue = document.getElementById('load-name').value;
-  const d = new Date();
-  const timestamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
-  a.download = loadNameValue ? `${loadNameValue}_${timestamp}.txt` : 'download.txt';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-function uploadContent() {
-  // Create a temporary file input element
-  const tempInput = document.createElement('input');
-  tempInput.type = 'file';
-  tempInput.onchange = function(event) {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        // Populate the textarea with the file content
-        document.getElementById('main-pad').value = e.target.result;
-      };
-      reader.readAsText(file);
+async function extractTags(query="") {
+  const querys = query.split(" ");
+  debuglog(querys);
+  const lines = mainPad.value.split('\n');
+  const uniqueTags = new Set();
+  for (const line of lines) {
+    const metadata = extractMetadata(line);
+    if (!query || querys.some(aquery => metadata.tags.includes(aquery))) {
+      for (const tag of metadata.tags) {
+        uniqueTags.add(tag);
+      }
     }
-    // Clean up: remove the temporary input after use
-    tempInput.remove();
-  };
-  // Trigger the file input to open the file dialog
-  tempInput.click();
-}
-
-//async function load_emnolope2() {
-//  load("emnolope2","   ");
-//}
-//async function load_regret2() {
-//  load("emnoloperegret2"," ");
-//}
-//async function load_uhhidk() {
-//  load("uhhidk","password1234");
-//}
-function save() {
-  debuglog("Trying to save...");
-  if (finalPad.value == "") {
-    debuglog("text area empty, refusing to save");
-    return;
   }
-  cloud.save(finalPad.value);
+  graphResults.value=[...uniqueTags].join(' ');
 }
-function recycle() {
-  mainPad.value=finalPad.value;
-  resetText(0,1,1,0);
+function graphSearch(query) {
+  let [lines,results]=searchText("tag");
+  results=results.filter(([currentNote,hidden])=>!hidden);
+  results=results.map(([currentNote,hidden])=>currentNote);
+  results=results.map(linens=>linens.map(linen=>lines[linen]).join('\n')).join('\n');
+  if (query!=="")
+    results=searchGraph(query,results);
+  graphResults.value=results;
 }
 function simplifyGraphLang(input) {
   let tape = input;
@@ -612,51 +591,6 @@ function tapeEater(tape) {
   }
   return [token, restOfTape];
 }
-function graphSearch(query) {
-  let [lines,results]=searchText("tag");
-  results=results.filter(([currentNote,hidden])=>!hidden);
-  results=results.map(([currentNote,hidden])=>currentNote);
-  results=results.map(linens=>linens.map(linen=>lines[linen]).join('\n')).join('\n');
-  if (query!=="")
-    results=searchGraph(query,results);
-  graphResults.value=results;
-}
-function searchGraph(term, input) {
-  let allEdges = simplifyGraphLang(input);
-  let terms = term.split(" ");
-  let matchingEdges2 = allEdges.map(edge=>edge.join('')).filter(edge => terms.some(t => edge.includes(t))).join(' ');
-  let matchingEdges = allEdges.map(edge=>edge[0]+' '+edge[2]).filter(edge => terms.some(t => edge.includes(t)));
-  return matchingEdges.join(' ')+'\n'+matchingEdges2;
-}
-async function extractTags(query="") {
-  const querys = query.split(" ");
-  debuglog(querys);
-  const lines = mainPad.value.split('\n');
-  const uniqueTags = new Set();
-  for (const line of lines) {
-    const metadata = extractMetadata(line);
-    if (!query || querys.some(aquery => metadata.tags.includes(aquery))) {
-      for (const tag of metadata.tags) {
-        uniqueTags.add(tag);
-      }
-    }
-  }
-  graphResults.value=[...uniqueTags].join(' ');
-}
-function replaceFragmentsTag(search, replace = '') {
-  console.log(`Replacing tag: ${search} with ${replace}`);
-  const fragmentResults = document.getElementById('fragment-results');
-  const textareas = fragmentResults.getElementsByTagName('textarea');
-  Array.from(textareas).filter(textarea => window.getComputedStyle(textarea).display !== 'none').forEach(textarea => {
-    const metadata = extractMetadata(textarea.value);
-    if (search) {
-      metadata.tags = metadata.tags
-        .map(tag => (tag === search ? replace : tag))
-        .filter(Boolean);
-    }
-    textarea.value = `|${metadata.date || ''}|${metadata.tags.join(' ')||''}|${metadata.content}`;
-  });
-}
 function chatReply(context, prompt, useGPT4 = false) {
   debuglog('Prompt:');
   debuglog(prompt);
@@ -715,6 +649,56 @@ function chatReply(context, prompt, useGPT4 = false) {
     });
   });
 }
+function replaceFragmentsTag(search, replace = '') {
+  console.log(`Replacing tag: ${search} with ${replace}`);
+  const fragmentResults = document.getElementById('fragment-results');
+  const textareas = fragmentResults.getElementsByTagName('textarea');
+  Array.from(textareas).filter(textarea => window.getComputedStyle(textarea).display !== 'none').forEach(textarea => {
+    const metadata = extractMetadata(textarea.value);
+    if (search) {
+      metadata.tags = metadata.tags
+        .map(tag => (tag === search ? replace : tag))
+        .filter(Boolean);
+    }
+    textarea.value = `|${metadata.date || ''}|${metadata.tags.join(' ')||''}|${metadata.content}`;
+  });
+}
+const debugDiv =        document.getElementById('debug');
+function debuglog(message) {
+  let append = (typeof message === 'string') ? (message) : JSON.stringify(message);
+  debugDiv.textContent += append + '\r\n';
+}
+debuglog('program start');
+let cloud=new ProtectedTextApi(" "," ");
+mainPad.value = 
+////    ////    ////    ////    ////    ////    ////
+`
+||user|Type in pet dog and cat in tag search
+||pet dog cat|bowls
+||pet dog|bark
+||pet cat|meow
+||pet|
+there are people who keep pet tigers and pet bats and pet elephants
+||star|someone who's famous
+||cat star|Taiga, Catwoman
+||dog star|Snoop Dogg
+||cat star|Garfield
+||cat|La Fea Rosa
+she's my cousin's cat she used to be so small but now she's all grown up
+||cat star|Black Panther
+||dog star|Snoopy
+`
+////    ////    ////    ////    ////    ////    ////
+function loadParameters() {
+  const urlParams = new URLSearchParams(window.location.search);
+  [loadName.value, loadPass.value] = [urlParams.get('o'), urlParams.get('t')];
+  if (loadName.value && loadPass.value) {
+    load(loadName.value, loadPass.value);
+  }
+  chatKey.value = urlParams.get('a');
+} loadParameters();
+
+
 
 
 
