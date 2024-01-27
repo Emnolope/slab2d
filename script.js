@@ -279,10 +279,29 @@ function parseQuery(query) { //turn query into AST
   return {normal, pos, neg};
 }
 function searchNotesAndDisplay() {
-  // Clear the search results
+  if (searchGraphWarp.checked) {
+    let graph = buildGraph();
+    debuglog(graph)
+    let operatorPattern = /([><-=]\w+)/g;
+    searchQuery.value=searchQuery.value.replace(
+      operatorPattern, function(match) {
+        let operator = match[0];
+        let query = match.slice(1);
+        if (operator==='<')
+          return graph.getSuper(query).join(' ');
+        if (operator==='>')
+          return graph.getSub(query).join(' ');
+        if (operator==='=')
+          return graph.getEqual(query).join(' ');
+        if (operator==='-')
+          return graph.getLink(query).join(' ');
+    });
+    debuglog("survivor");
+  }
   fragmentResults.innerHTML = '';
   let [lines,results]=searchText(searchQuery.value);
-  results.map(([currentNote,hidden])=>addNoteToSearchResults(currentNote,hidden,lines));
+  results.map(([currentNote,hidden])=>
+    addNoteToSearchResults(currentNote,hidden,lines));
 }
 function addNoteToSearchResults(noteLines, hidden, lines) {
   // Create a textarea for the note
@@ -363,12 +382,141 @@ function combineFragmentsCramUp() {
     finalPad.value += hidden[i].value + '\n';
   }
 }
-function searchGraph(term, input) {
-  let allEdges = simplifyGraphLang(input);
-  let terms = term.split(" ");
-  let matchingEdges2 = allEdges.map(edge=>edge.join('')).filter(edge => terms.some(t => edge.includes(t))).join(' ');
-  let matchingEdges = allEdges.map(edge=>edge[0]+' '+edge[2]).filter(edge => terms.some(t => edge.includes(t)));
-  return matchingEdges.join(' ')+'\n'+matchingEdges2;
+/*Graph class
+Model of interconnected tags for ontology navigation. Tags are nodes. Relationships are edges.
+Feed `addBinaryRelation` to build the graph.
+`"green beings eat sunlight"~plant>vegetable=veggie=greens-fruit<(apple banana orange)`
+getSuper('apple'): Returns 'fruit'.
+  Operator: >. Gets superset tags.
+getSub('fruit'): Returns ['apple', 'banana', 'orange'].
+  Operator: <. Gets subset tags.
+getEqual('veggie')> Returns ['vegetable', 'veggie', 'green'].
+  Operator: =. Gets central tag synonym.
+getLink('fruit'): Returns ['vegetables'].
+  Operator: -. Gets related tags.
+getComment('plant'): Returns "green beings eat sunlight".
+  Operator: ~. get tag description.
+*/
+class Graph {
+  constructor() {
+    this.nodes = {};
+    this.edges = [];
+  }
+  addEdge(left, operator, right) {
+    const edgeAlreadyExists = this.edges.some(edge => 
+      edge[0] === left && edge[2] === right && edge[1] === operator ||
+      (operator === '-' && edge[0] === right && edge[2] === left && edge[1] === operator));
+    if (!edgeAlreadyExists) {
+      this.edges.push([left, operator, right]);
+      this.getOrMake(left).push({ [operator + 'x']: right });
+      this.getOrMake(right).push({ ['x' + operator]: left });
+    }
+  }
+  removeEdge(left, operator, right) {
+    this.edges = this.edges.filter(edge => 
+      !(edge[0] === left && edge[2] === right && edge[1] === operator) &&
+      !(operator === '-' && edge[0] === right && edge[2] === left && edge[1] === operator));
+    this.nodes[left] = this.nodes[left].filter(rel => !(rel[operator + 'x'] === right));
+    this.nodes[right] = this.nodes[right].filter(rel => !(rel['x' + operator] === left));
+  }
+  getOrMake(node) {
+    return this.nodes[node] = this.nodes[node] || [];
+  }
+  addBinaryRelation(relation) { /// the input of add binary relation, might need to change.
+    //console.log('adding', relation)
+    const [left, operator, right] = relation; 
+    if (operator === '~') {
+      const existingComment = this.getOrMake(left).find(rel => '~' in rel);
+      if (existingComment) {
+        existingComment['~'] += '\n' + right;
+      } else {
+        this.nodes[left].push({ '~': right });
+      }
+      return;
+    }
+    this.getOrMake(left);
+    this.getOrMake(right);
+    const leftBase = this.getEqualDown(left);
+    const rightBase = this.getEqualDown(right);
+    if (operator === '=') {
+      this.propagateEquality(leftBase,rightBase);
+      this.propagateEquality(leftBase,right);
+    }
+    this.addEdge(leftBase, operator, rightBase);
+  }
+  propagateEquality(left, right) {
+    this.nodes[right].forEach(relation => {
+      for (const [op, target] of Object.entries(relation)) {
+        if (op !== '~') {
+          this.addEdge(left, op.replace('x', ''), target);
+          this.removeEdge(right, op.replace('x', ''), target);
+        }
+      }
+    });
+  }
+  getEqualDown(node) {
+    const edges = this.getNodeEdges(node, 'x=');
+    let returnval = edges.length && edges[0] !== node ? this.getEqualDown(edges[0]) : node;
+    return returnval;
+  }
+  getEqualUp(node) {
+    return this.getNodeEdges(node, '=x');
+  }
+  getEqual(node) {
+    let base = this.getEqualDown(node);
+    return [...new Set([...this.getEqualUp(base), base])];
+  }
+  getNodeEdges(nodeVal, operator) {
+    return this.nodes[nodeVal]
+      ?.filter(rel => rel.hasOwnProperty(operator))
+      .map(rel => rel[operator]) || [];
+  }
+  getSuper(node) {
+    return this.getNodeEdges(node, 'x>');
+  }
+  getSub(node) {
+    return this.getNodeEdges(node, '>x');
+  }
+  getLink(node) {
+    return this.getNodeEdges(node, '-');
+  }
+  getComment(node) {
+    return this.getNodeEdges(node, '~')[0] || '';
+  }
+  dump () {
+    console.log(this.nodes);
+    console.log(this.edges);
+  }
+  /*reconstruct(node) {
+    return this.nodes[node]?.map(nodeRel => {
+      let [operator, target] = Object.entries(nodeRel)[0];
+      return [
+        operator.indexOf('x') ? target : node,
+        operator.replace('x', ''),
+        operator.indexOf('x') ? node : target  
+      ];
+    }) || [];
+  }*/
+}
+function buildGraph(relations='') {
+  let results;
+  if (!relations) {
+    let [lines, rawResults] = searchText("tag");
+    rawResults = rawResults.filter(([currentNote, hidden]) => !hidden);
+    rawResults = rawResults.map(([currentNote]) => currentNote);
+    rawResults = rawResults.map(linens => linens.map(linen => lines[linen]).join('\n'));
+    results = rawResults.map(result => simplifyGraphLang(result)).flat();
+  } else {
+    results = simplifyGraphLang(relations);
+  }
+  results = results.map(relation => relation.map(part => part instanceof Array ? part[0] : part));
+  //.sort((a,b)=>(b[1]==='=')-(a[1]==='='));
+  //debuglog(results);
+  let graph = new Graph();
+  for (let relation of results) {
+    graph.addBinaryRelation(relation);
+  }
+  return graph;
 }
 async function extractTags(query="") {
   const querys = query.split(" ");
@@ -385,14 +533,13 @@ async function extractTags(query="") {
   }
   graphResults.value=[...uniqueTags].join(' ');
 }
-function graphSearch(query) {
-  let [lines,results]=searchText("tag");
-  results=results.filter(([currentNote,hidden])=>!hidden);
-  results=results.map(([currentNote,hidden])=>currentNote);
-  results=results.map(linens=>linens.map(linen=>lines[linen]).join('\n')).join('\n');
-  if (query!=="")
-    results=searchGraph(query,results);
-  graphResults.value=results;
+function graphSearch(query, graph='') {
+  graph = graph || buildGraph();
+  let terms = query.split(" ");
+  let matches = graph.edges.
+    filter(edge => terms.some(term => 
+      edge[0] === term || edge[2] === term));
+  graphResults.value = matches.flat().map(edge => edge.join(" ")).join("\n");
 }
 function simplifyGraphLang(input) {
   let tape = input;
@@ -592,6 +739,7 @@ function tapeEater(tape) {
   return [token, restOfTape];
 }
 function chatReply(context, prompt, useGPT4 = false) {
+  debuglog(useGPT4);
   debuglog('Prompt:');
   debuglog(prompt);
   if (!chatPad || !chatKey) {
@@ -668,12 +816,24 @@ function debuglog(message) {
   let append = (typeof message === 'string') ? (message) : JSON.stringify(message);
   debugDiv.textContent += append + '\r\n';
 }
+const debuglogdelay = (function() {
+  let counter = 50;
+    return function(...args) {
+      counter <= 0 ? debuglog(...args):counter--;
+  }
+})();
 debuglog('program start');
 let cloud=new ProtectedTextApi(" "," ");
 mainPad.value = 
 ////    ////    ////    ////    ////    ////    ////
 `
 ||user|Type in pet dog and cat in tag search
+||tag|
+a=b,b=c,c=d,d=e,f=g,g=h,h=i,i=j,c=h
+pet<(dog cat)
+dog=canines=dogs=doggy
+animal=animals<pet
+pet~"single creature subserviant to another (usually different species) for companionship of the master"
 ||pet dog cat|bowls
 ||pet dog|bark
 ||pet cat|meow
