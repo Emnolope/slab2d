@@ -281,7 +281,7 @@ function parseQuery(query) { //turn query into AST
 function searchNotesAndDisplay() {
   if (searchGraphWarp.checked) {
     let graph = buildGraph();
-    debuglog(graph)
+    //debuglog(graph)
     let operatorPattern = /([><-=]\w+)/g;
     searchQuery.value=searchQuery.value.replace(
       operatorPattern, function(match) {
