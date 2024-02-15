@@ -280,23 +280,7 @@ function parseQuery(query) { //turn query into AST
 }
 function searchNotesAndDisplay() {
   if (searchGraphWarp.checked) {
-    let graph = buildGraph();
-    //debuglog(graph)
-    let operatorPattern = /([><-=]\w+)/g;
-    searchQuery.value=searchQuery.value.replace(
-      operatorPattern, function(match) {
-        let operator = match[0];
-        let query = match.slice(1);
-        if (operator==='<')
-          return graph.getSuper(query).join(' ');
-        if (operator==='>')
-          return graph.getSub(query).join(' ');
-        if (operator==='=')
-          return graph.getEqual(query).join(' ');
-        if (operator==='-')
-          return graph.getLink(query).join(' ');
-    });
-    debuglog("survivor");
+    searchQuery.value=graphWarp(searchQuery.value);
   }
   fragmentResults.innerHTML = '';
   let [lines,results]=searchText(searchQuery.value);
@@ -318,7 +302,7 @@ function addNoteToSearchResults(noteLines, hidden, lines) {
   adjustTextareaHeight(textarea);
 }
 function adjustTextareaHeight(textarea) { //fit textarea to content 
-  textarea.style.height = 'auto';
+  textarea.style.height = '0px';
   textarea.style.height = textarea.scrollHeight + 'px';
   //debuglog('adj');
 }
@@ -499,13 +483,19 @@ class Graph {
   }*/
 }
 function buildGraph(relations='') {
+  debuglog("buidGraph");
   let results;
   if (!relations) {
     let [lines, rawResults] = searchText("tag");
     rawResults = rawResults.filter(([currentNote, hidden]) => !hidden);
     rawResults = rawResults.map(([currentNote]) => currentNote);
     rawResults = rawResults.map(linens => linens.map(linen => lines[linen]).join('\n'));
-    results = rawResults.map(result => simplifyGraphLang(result)).flat();
+    results = rawResults.map(result => {
+      //debuglog(result);
+      let thing=simplifyGraphLang(result);
+      //debuglog(thing);
+      return thing;
+    }).flat();
   } else {
     results = simplifyGraphLang(relations);
   }
@@ -533,14 +523,34 @@ async function extractTags(query="") {
   }
   graphResults.value=[...uniqueTags].join(' ');
 }
+function graphWarp(query) {
+  let graph = buildGraph();
+  //debuglog(graph);
+  let operatorPattern = /([><-=]\w+)/g;
+  return query.replace(
+    operatorPattern, function(match) {
+      let operator = match[0];
+      let query = match.slice(1);
+      if (operator==='>')
+        return graph.getSuper(query).join(' ');
+      if (operator==='<')
+        return graph.getSub(query).join(' ');
+      if (operator==='=')
+        return graph.getEqual(query).join(' ');
+      if (operator==='-')
+        return graph.getLink(query).join(' ');
+  });
+}
 function graphSearch(query, graph='') {
-  graph = graph || buildGraph();
+  /*graph = graph || buildGraph();
   let terms = query.split(" ");
   let matches = graph.edges.
     filter(edge => terms.some(term => 
       edge[0] === term || edge[2] === term));
-  graphResults.value = matches.flat().map(edge => edge.join(" ")).join("\n");
+  graphResults.value = matches.flat().map(edge => edge.join(" ")).join("\n");*/
+  graphResults.value=graphWarp(query);
 }
+//SGL AND TAPE EATER HAVE A SERIOUS PROBLEM WITH NESTED ARRAYSS
 function simplifyGraphLang(input) {
   let tape = input;
   let pancake = [];
@@ -564,6 +574,7 @@ function simplifyGraphLang(input) {
   }
   while (tape) {
     [token, tape] = tapeEater(tape);
+    //debuglog([token,tape]);
     //error is [] empty array
     //tags are [a b] array, even singles, even comments, even brackets
     //operators are "?" character
@@ -689,6 +700,8 @@ function tapeEater(tape) {
   for (let [open, close] of enclosures) {
     if (restOfTape.startsWith(open)) {
       let endIndex = restOfTape.indexOf(close, 1);
+      //debuglog(restOfTape);
+      //debuglog(endIndex);
       if (endIndex === -1) {
         // If no closing enclosure is found, return error and clear tape
         token = [];
