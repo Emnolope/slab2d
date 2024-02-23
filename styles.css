@@ -1,8 +1,6 @@
 body {
 }
 #app {
-  width: 50vh;
-  max-width: 768px;
   margin: 0 auto;
   overflow-y: auto;
 }

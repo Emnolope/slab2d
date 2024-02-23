@@ -392,16 +392,18 @@ class Graph {
       (operator === '-' && edge[0] === right && edge[2] === left && edge[1] === operator));
     if (!edgeAlreadyExists) {
       this.edges.push([left, operator, right]);
-      this.getOrMake(left).push({ [operator + 'x']: right });
-      this.getOrMake(right).push({ ['x' + operator]: left });
+      let sided = operator==='-' ? '' : 'x';
+      this.getOrMake(left).push({ [operator + sided]: right });
+      this.getOrMake(right).push({ [sided + operator]: left });
     }
   }
   removeEdge(left, operator, right) {
     this.edges = this.edges.filter(edge => 
       !(edge[0] === left && edge[2] === right && edge[1] === operator) &&
       !(operator === '-' && edge[0] === right && edge[2] === left && edge[1] === operator));
-    this.nodes[left] = this.nodes[left].filter(rel => !(rel[operator + 'x'] === right));
-    this.nodes[right] = this.nodes[right].filter(rel => !(rel['x' + operator] === left));
+    let sided = operator==='-' ? '' : 'x';
+    this.nodes[left] = this.nodes[left].filter(rel => !(rel[operator + sided] === right));
+    this.nodes[right] = this.nodes[right].filter(rel => !(rel[sided + operator] === left));
   }
   getOrMake(node) {
     return this.nodes[node] = this.nodes[node] || [];
@@ -526,7 +528,7 @@ async function extractTags(query="") {
 function graphWarp(query) {
   let graph = buildGraph();
   //debuglog(graph);
-  let operatorPattern = /([><-=]\w+)/g;
+  let operatorPattern = /([><=-]\w+)/g;
   return query.replace(
     operatorPattern, function(match) {
       let operator = match[0];
