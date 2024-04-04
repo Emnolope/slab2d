@@ -43,7 +43,7 @@ function save() {
       let [before, ...after] = acc.pop().split(separator);
       return [...acc, before, ...after];
   }, [finalPad.value]);
-  debuglog(splitText);
+  //debuglog(splitText);
   //for (let i = 0; i < 1; i++) {
   for (let i = 0; i < cloud.length; i++) {
     cloud[i].save(splitText[i]);
@@ -191,7 +191,7 @@ function resetText(u,d,t,q) {
   if (q) cloud = new ProtectedTextApi(" "," "), loadName.value = loadPass.value = '';
 }
 function searchText(query) {
-  let results=[];
+  let results = [];
   const lines = mainPad.value.split('\n');
   //debuglog(lines);
   // If search bar is empty, return
@@ -307,6 +307,7 @@ function searchNotesAndDisplay() {
   if (searchGraphWarp.checked) {
     searchQuery.value=graphWarp(searchQuery.value);
   }
+  debuglog('searching and displaying notes');
   fragmentResults.innerHTML = '';
   let [lines,results]=searchText(searchQuery.value);
   results.map(([currentNote,hidden])=>
