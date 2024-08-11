@@ -1,3 +1,4 @@
+//FIX SGL AND QUERY !|& -=~<>
 const loadName =        document.getElementById('load-name');
 const loadPass =        document.getElementById('load-pass');
 const mainPad =         document.getElementById('main-pad');
@@ -180,6 +181,18 @@ function downloadContent() {
   a.click();
   document.body.removeChild(a);
 }
+function downoadTime(text, ext) {
+  const blob = new Blob([text], { type: 'text/'+ext });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const loadNameValue = document.getElementById('load-name').value;
+  const d = new Date();
+  const timestamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+  a.download = loadNameValue ? `${loadNameValue}_${timestamp}.${ext}` : `download.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 function recycle() {
   mainPad.value=finalPad.value;
   resetText(0,1,1,0);
@@ -191,7 +204,7 @@ function resetText(u,d,t,q) {
   if (q) cloud = new ProtectedTextApi(" "," "), loadName.value = loadPass.value = '';
 }
 function searchText(query) {
-  let results = [];
+  let results=[];
   const lines = mainPad.value.split('\n');
   //debuglog(lines);
   // If search bar is empty, return
@@ -199,35 +212,168 @@ function searchText(query) {
   // Initialize a variable to hold the current parent note
   //var currentParentNote = null;
   // Initialize a variable to hold the current note (parent or subnote)
-  var currentNote = [];
   // Loop through each line
   var hidden = true;
   for (var i = 0; i < lines.length; i++) {
     var metadata = extractMetadata(lines[i]);
-    // If the line contains the search text, add it to the search results
-    if (true) {
-      // If the note is a parent note (has a date or tags), update the current parent note
-      if (metadata.date || metadata.tags.length > 0) {
-        // If there's a current note left, add it to the search results
-        if (currentNote.length > 0) {
-          results.push([currentNote,hidden]);
-          //addNoteToSearchResults(currentNote,hidden,lines);
-        }
-        //currentParentNote = metadata;
-        hidden=!evaluateAst(parseQuery(query), lines[i], metadata)
-        currentNote = [i];
-      } else {
-        // If the line is a subnote, add it to the current note
-        currentNote.push(i);
-      }
+    // If the note is a parent note (has a date or tags), update the current parent note
+    if (metadata.date || metadata.tags.length > 0) {
+      // If the line contains the search text, add it to the search results
+      hidden=!evaluateAst(parseQuery(query), lines[i], metadata);
+      results.push([[i],hidden,[metadata.date,metadata.tags]]);
+    } else {
+      // If the line is a subnote, add it to the current note
+      results.at(-1)[0].push(i);
     }
   }
-  // If there's a current note left, add it to the search results
-  if (currentNote.length > 0) {
-    results.push([currentNote,hidden]);
-    //addNoteToSearchResults(currentNote,hidden,lines);
-  }
   return [lines,results];
+}
+function dumpNotes() {
+  debuglog(searchText(' '));
+}
+function markDown() {
+  // Step 1: Search text and get lines and results
+  let [lines, results] = searchText(' ');
+  // Step 2: Process results to get tags and note lines
+  let processedResults = results.map(function([noteLines, hidden, metadata]) {
+    let tags = metadata[0] !== null ? [...metadata[1], metadata[0]] : metadata[1];
+    let noteLinesProcessed = noteLines.map(function(i) {
+      return lines[i];
+    }).map(function(line, j) {
+      return j === 0 ? extractMetadata(line).content : line;
+    });
+    return [tags, noteLinesProcessed];
+  });
+  // Step 3: Format the processed results
+  let formattedResults = processedResults.map(function([tags, noteLines]) {
+    let firstLine = ['#',...(noteLines[0]===''?[]:[noteLines[0]]), ...tags.map(function(tag) {
+      return '#' + tag;
+    })].join(' ');
+    return [firstLine.trim(), ...noteLines.slice(1)];
+  });
+  let markDown = formattedResults.map(lines=>lines.join('\n')).join('\n\n');
+  tempPad.value=markDown;
+  downloadTime(markdwn,'md');
+}
+function opml() {
+  // Step 1: Search text and get lines and results
+  let [lines, results] = searchText(' ');
+  // Step 2: Process results to get tags and note lines
+  let processedResults = results.map(function([noteLines, hidden, metadata]) {
+    let tags = metadata[0] !== null ? [...metadata[1], metadata[0]] : metadata[1];
+    let noteLinesProcessed = noteLines.map(function(i) {
+      return lines[i];
+    }).map(function(line, j) {
+      return j === 0 ? extractMetadata(line).content : line;
+    });
+    return [tags, noteLinesProcessed];
+  });
+  // Step 3: Format the processed results
+  let formattedResults = processedResults.map(function([tags, noteLines]) {
+    let firstLine = [noteLines[0], ...tags.map(function(tag) {
+      return '#' + tag;
+    })].join(' ');
+    return [firstLine.trim(), ...noteLines.slice(1)];
+  });
+  debuglog(formattedResults);
+  let indentedResults = formattedResults.map((paragraph) => {
+    const result = [];
+    for (const line of paragraph) {
+      let level = line.search(/\S/);
+      if (level === -1)
+        level = result.at(-1)?.level ?? 0;
+      const text = line.trim();
+      result.push({ text, level });
+    }
+    return result;
+  });
+  debuglog(indentedResults);
+  let nestedResults = indentedResults.map((lines) => {
+    function ttreeToJson(ttree, level = 0) {
+      const result = [];
+      for (let i = 0; i < ttree.length; i++) {
+        const cn = ttree[i];
+        const nn = ttree[i + 1] || { level: -1 };
+
+        if (cn.level > level) continue;
+        if (cn.level < level) return result;
+
+        const node = { text: cn.text, children: [] };
+        if (nn.level === level) {
+          result.push(node);
+        } else if (nn.level > level) {
+          const rr = ttreeToJson(ttree.slice(i + 1), nn.level);
+          node.children = rr;
+          result.push(node);
+        } else {
+          result.push(node);
+          return result;
+        }
+      }
+      return result;
+    }
+    debuglog(lines[0]);
+    return [{text: lines.shift().text,children: ttreeToJson(lines)}];
+  });
+  tempPad.value=debuglog(nestedResults);
+  const parser = new DOMParser();
+  //debuglog("Parser created");
+  const xmlDoc = parser.parseFromString('<?xml version="1.0" encoding="UTF-8"?><opml version="2.0"><head></head><body></body></opml>', 'application/xml');
+  //debuglog("XML Doc created");
+  const bodyElement = xmlDoc.querySelector('body');
+  //debuglog("Body element found:", bodyElement);
+  function addOutlineElements(parentElement, items) {
+    //debuglog("Adding outline elements to:", parentElement);
+    items.forEach(item => {
+      //debuglog("Processing item:", item);
+      const outlineElement = xmlDoc.createElement('outline');
+      outlineElement.setAttribute('text', item.text);
+      parentElement.appendChild(outlineElement);
+      //debuglog("Outline element added:", outlineElement);
+      if (item.children) {
+        //debuglog("Item has children, recursing...");
+        addOutlineElements(outlineElement, item.children);
+      }
+    });
+  }
+  nestedResults.forEach(item => {
+    //debuglog("Processing nested result:", item);
+    addOutlineElements(bodyElement, item);
+  });
+  const serializer = new XMLSerializer();
+  //debuglog("Serializer created");
+  let opmlResult = serializer.serializeToString(xmlDoc);
+  //debuglog("OPML Result:", opmlResult);
+  //tempPad.value = opmlResult;
+  
+  const blob = new Blob([opmlResult], { type: 'text/opml' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const loadNameValue = document.getElementById('load-name').value;
+  const d = new Date();
+  const timestamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+  a.download = loadNameValue ? `${loadNameValue}_${timestamp}.opml` : 'download.opml';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+function ideaflow() {
+  let [lines, results] = searchText(' ');
+  tempPad.value = results.map(function([noteLines, hidden, metadata]) {
+    let tags = metadata[0] !== null ? [...metadata[1], metadata[0]] : metadata[1];
+    let noteLinesProcessed = noteLines.map(function(i) {
+      return lines[i];
+    }).map(function(line, j) {
+      return j === 0 ? extractMetadata(line).content : line;
+    });
+    return [tags, noteLinesProcessed];
+  }).map(function([tags, noteLines]) {
+    let firstLine = [noteLines[0], ...tags.map(function(tag) {
+      return '#' + tag;
+    })].join(' ');
+    let restLines = noteLines.slice(1).join('\n');
+    return [firstLine, restLines].join('\n');
+  }).join('\n--\n');
 }
 function extractMetadata(note) {
   var metadata = {
@@ -328,7 +474,7 @@ function addNoteToSearchResults(noteLines, hidden, lines) {
   adjustTextareaHeight(textarea);
 }
 function adjustTextareaHeight(textarea, minRows=1, maxRows=Infinity) {
-  var t = textarea;
+  /*var t = textarea;
   if (t.scrollTop == 0)
     t.scrollTop=1;
   while (t.scrollTop == 0) {
@@ -354,12 +500,9 @@ function adjustTextareaHeight(textarea, minRows=1, maxRows=Infinity) {
       t.style.overflowY = "auto";
       break;
     }
-  }
+  }*/
   //https://stackoverflow.com/questions/17772260/textarea-auto-height
-  //debuglog(textarea.style.height);
-  /*textarea.style.height = (Number(textarea.style.height.replace('px', ''))-1)+'px';
-  textarea.style.height = (textarea.scrollHeight + 20) + "px";*/
-  /*
+  
   // Create a hidden "shadow" div with the same width as the textarea
   var shadow = document.createElement('div');
   shadow.style.width = window.getComputedStyle(textarea).width;
@@ -389,7 +532,7 @@ function adjustTextareaHeight(textarea, minRows=1, maxRows=Infinity) {
 
   // Set the textarea's height
   textarea.style.height = newHeight + 'px';
-  */
+  
 }
 function debounceAndThrottle(func, debounceDelay, throttleDelay) {
   var timeoutId;
@@ -912,9 +1055,10 @@ function replaceFragmentsTag(search, replace = '') {
   });
 }
 const debugDiv =        document.getElementById('debug');
-function debuglog(message) {
-  let append = (typeof message === 'string') ? (message) : JSON.stringify(message);
+function debuglog(...messages) {
+  let append = messages.map(message => typeof message === 'string' ? message : JSON.stringify(message)).join(' ');
   debugDiv.textContent += append + '\r\n';
+  return append;
 }
 const debuglogdelay = (function() {
   let counter = 50;

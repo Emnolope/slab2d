@@ -15,6 +15,10 @@
       <button onclick="downloadContent()">Download</button>
       <button onclick="uploadContent()">Upload</button>
       <button onclick="resetText(1,1,1,1)">RESET</button>
+      <button onclick="dumpText()">Dump</button>
+      <button onclick="opml()">OPML</button>
+      <button onclick="markDown()">MD</button>
+      <button onclick="ideaflow()">IF</button>
       <textarea id="main-pad">
 ||user|Type in pet dog and cat in tag search
 ||user|Go to www.protectedtext.com to "register" a document and password combo
@@ -47,6 +51,24 @@ there are people who keep pet tigers and pet bats and pet elephants
 she's my cousin's cat she used to be so small but now she's all grown up
 ||cat star|Black Panther
 ||dog star|Snoopy
+||ompl tag1 tag2|OMPL TEST
+def outer_function():
+    print("Outer function starts")
+    def middle_function():
+        print("Middle function starts")
+        def inner_function():
+            print("Inner function starts")
+            print("Inner function ends")
+          #wow so nonstandard
+        print("Middle function calls inner function")
+        inner_function()
+        print("Middle function ends")
+      #some nonstandard
+      #indents
+    print("Outer function calls middle function")
+    middle_function()
+    print("Outer function ends")
+outer_function()
 </textarea>
     </div>
     <details id="graph-section">
@@ -76,9 +98,9 @@ she's my cousin's cat she used to be so small but now she's all grown up
       <button onclick="eval(document.getElementById('user-code').value)">(DANGER)Run</button>
     </details>
     <div id="search-section">
-      <input id="search-query" type="text" placeholder="Search tags...">
+      <input id="search-query" type="text" value="-arch -del" placeholder="Search tags...">
       <button onclick="searchNotesAndDisplay()">Go!</button>
-      <input id="search-graph-warp" type="checkbox" checked>Graph Warp
+      <input id="search-graph-warp" type="checkbox">Graph Warp
       <input id="search-singleton" type="checkbox">Singles
     </div>
     <div id="fragment-section">
@@ -94,6 +116,8 @@ she's my cousin's cat she used to be so small but now she's all grown up
       <textarea id="final-pad" readonly></textarea>
       <button onclick="save()">Save</button>
       <button onclick="recycle()">Re-Up</button>
+      <button onclick="combineFragments();save()">BS</button>
+      <button onclick="combineFragments();save();recycle();searchNotesAndDisplay()">BSRS</button>
     </div>
   </div>
   <div id="debug"></div>

@@ -35,7 +35,7 @@ body {
 }
 #fragment-vertical {
   display: flex;
-  height: 85vh;
+  height: 100vh;
   justify-content: space-between;
 }
 #chat-pad {
