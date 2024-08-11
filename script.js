@@ -474,7 +474,7 @@ function addNoteToSearchResults(noteLines, hidden, lines) {
   adjustTextareaHeight(textarea);
 }
 function adjustTextareaHeight(textarea, minRows=1, maxRows=Infinity) {
-  /*var t = textarea;
+  var t = textarea;
   if (t.scrollTop == 0)
     t.scrollTop=1;
   while (t.scrollTop == 0) {
@@ -500,9 +500,9 @@ function adjustTextareaHeight(textarea, minRows=1, maxRows=Infinity) {
       t.style.overflowY = "auto";
       break;
     }
-  }*/
+  }
   //https://stackoverflow.com/questions/17772260/textarea-auto-height
-  
+  /*
   // Create a hidden "shadow" div with the same width as the textarea
   var shadow = document.createElement('div');
   shadow.style.width = window.getComputedStyle(textarea).width;
@@ -532,7 +532,7 @@ function adjustTextareaHeight(textarea, minRows=1, maxRows=Infinity) {
 
   // Set the textarea's height
   textarea.style.height = newHeight + 'px';
-  
+  */
 }
 function debounceAndThrottle(func, debounceDelay, throttleDelay) {
   var timeoutId;
