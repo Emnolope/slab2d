@@ -116,7 +116,7 @@ outer_function()
       <textarea id="final-pad" readonly></textarea>
       <button onclick="save()">Save</button>
       <button onclick="recycle()">Re-Up</button>
-      <button onclick="combineFragments();save()">BS</button>
+      <button onclick="fragmentResults.getElementsByTagName('textarea').length === 0 && searchNotesAndDisplay(); combineFragmentsCram(); save();">&SBS</button>
       <button onclick="combineFragments();save();recycle();searchNotesAndDisplay()">BSRS</button>
     </div>
   </div>
