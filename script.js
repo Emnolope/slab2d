@@ -61,7 +61,8 @@ class ProtectedTextApi {
     this.dbversion = 0;
   }
   async loadTabs() {
-    //const url = `https://api.allorigins.win/raw?url=` + `${this.endpoint}?action=getJSON`;
+    //CHANGED TO WORK WITH LIBRARY COMPUTERS
+    //const url = `https://api.allorigins.win/raw?url=` + `${this.endpoint}?action=getJSON&dummy=${Date.now()}`;
     const url = 'https://corsproxy.io/?' + encodeURIComponent(`${this.endpoint}?action=getJSON&dummy=${Date.now()}`);
     const response = await fetch(url);
     this.siteObj = await response.json();
@@ -103,8 +104,8 @@ class ProtectedTextApi {
     };
     var ret = undefined;
     try {
-      const proxy = 'https://corsproxy.io/?';
-      const url = proxy + encodeURIComponent(this.endpoint);
+      //const url = 'https://corsproxy.io/?' + encodeURIComponent(this.endpoint);
+      const url = 'https://cors-proxy.fringe.zone/' + this.endpoint;
       const response = await fetch(url, clientHeaders);
       if (response.headers.get('Content-Type') === 'application/json') {
         ret = await response.json();
