@@ -204,6 +204,15 @@ function resetText(u,d,t,q) {
   if (t) finalPad.value = '';
   if (q) cloud = new ProtectedTextApi(" "," "), loadName.value = loadPass.value = '';
 }
+function tagChopper(tag) {
+  const spots = ['-', '.', '/', '_', '~'].
+    map(sep => tag.indexOf(sep)).
+    filter(index => index !== -1);
+  const first = Math.min(...spots);
+  return isNaN(first)
+    ? [tag, '', '']
+    : [tag.slice(0, first), tag[first], tag.slice(first + 1)];
+}
 function searchText(query) {
   let results=[];
   const lines = mainPad.value.split('\n');
@@ -220,7 +229,13 @@ function searchText(query) {
     // If the note is a parent note (has a date or tags), update the current parent note
     if (metadata.date || metadata.tags.length > 0) {
       // If the line contains the search text, add it to the search results
-      hidden=!evaluateAst(parseQuery(query), lines[i], metadata);
+      hidden=!evaluateAst(parseQuery(query), lines[i], {
+        ...metadata,
+        tags: metadata.tags.map(
+          tag => tagChopper(tag)[0].
+          toLowerCase()
+        )
+      });
       results.push([[i],hidden,[metadata.date,metadata.tags]]);
     } else {
       // If the line is a subnote, add it to the current note
@@ -231,30 +246,6 @@ function searchText(query) {
 }
 function dumpNotes() {
   debuglog(searchText(' '));
-}
-function markDown() {
-  // Step 1: Search text and get lines and results
-  let [lines, results] = searchText(' ');
-  // Step 2: Process results to get tags and note lines
-  let processedResults = results.map(function([noteLines, hidden, metadata]) {
-    let tags = metadata[0] !== null ? [...metadata[1], metadata[0]] : metadata[1];
-    let noteLinesProcessed = noteLines.map(function(i) {
-      return lines[i];
-    }).map(function(line, j) {
-      return j === 0 ? extractMetadata(line).content : line;
-    });
-    return [tags, noteLinesProcessed];
-  });
-  // Step 3: Format the processed results
-  let formattedResults = processedResults.map(function([tags, noteLines]) {
-    let firstLine = ['#',...(noteLines[0]===''?[]:[noteLines[0]]), ...tags.map(function(tag) {
-      return '#' + tag;
-    })].join(' ');
-    return [firstLine.trim(), ...noteLines.slice(1)];
-  });
-  let markDown = formattedResults.map(lines=>lines.join('\n')).join('\n\n');
-  tempPad.value=markDown;
-  downloadTime(markdwn,'md');
 }
 function opml() {
   // Step 1: Search text and get lines and results
@@ -376,7 +367,7 @@ function ideaflow() {
     return [firstLine, restLines].join('\n');
   }).join('\n--\n');
 }
-function extractMetadata(note) {
+function extractMetadataTriplet(note) {
   var metadata = {
     date: null,
     tags: [],
@@ -399,7 +390,6 @@ function extractMetadata(note) {
       if (matches[2]) {
         add='tribar';
         metadata.tags=matches[2].
-          replace(/[-_~\s]\d{2,5}$/, '').
           split(' ').
           filter(Boolean);
       }
@@ -422,14 +412,94 @@ function extractMetadata(note) {
       1;//console.log('NS');
     }
   }
-  metadata.tags = metadata.tags.map(tag => tag.toLowerCase());
-  metadata.tags = metadata.tags.map(s=>
-                                    ((idx=>idx===-1?[s,'']:[s.slice(0,idx),s.slice(idx)])(s.indexOf('_',1)))[0])
   metadata.tags=metadata.tags.filter(Boolean);
   /*if (metadata.tags.length) {
     debuglog(metadata.tags);
   }*/
   return metadata;
+}
+function TripletToMarkDown() {
+  // Step 1: Search text and get lines and results
+  let [lines, results] = searchText(' ');
+  // Step 2: Process results to get tags and note lines
+  let processedResults = results.map(function([noteLines, hidden, metadata]) {
+    let date = metadata[0];
+    let tags = metadata[1];
+    let noteLinesProcessed = noteLines.map(function(i) {
+      return lines[i];
+    }).map(function(line, j) {
+      return j === 0 ? extractMetadata(line).content : line;
+    });
+    return [date, tags, noteLinesProcessed];
+  });
+  // Step 3: Format processed results into Markdown
+  let formattedResults = processedResults.map(function([date, tags, noteLines]) {
+    let firstLine = [
+      '#', 
+      ...(date ? [`#date/${date}`] : []),
+      ...tags.map(tag=>(([a,b,c])=>`#${a}${(c)?'/'+c:''}`)(tagChopper(tag))),
+      ...([noteLines[0]] || [])
+    ].join(' ');
+    return [
+      firstLine, 
+      ...noteLines.slice(1)
+    ].join('\n');
+  });
+  // Step 4: Join Markdown and update the result
+  let markDown = formattedResults.join('\n');
+  mainPad.value = markDown;
+}
+function extractMetadataMarkdown(note) {
+  const metadata = {
+    date: null,
+    tags: [],
+    content: note
+  };
+  const regex = /^#\s((#[^\s]+\s)+)(.*?)$/;
+  const match = note.match(regex);
+  if (match) {
+    let tags = match[1].
+      split(/\s+/).
+      filter(Boolean).
+        map(tag => tag.
+          replace(/^#/, '')
+      );
+    for (let i = 0; i < tags.length; i++) {
+      if (/^date\//.test(tags[i])) {
+        metadata.date = tagChopper(tags[i])[2];
+        tags.splice(i, 1);
+        break;
+      }
+    }
+    metadata.tags = tags;
+    metadata.content = match[3];
+  }
+  return metadata;
+} let extractMetadata=extractMetadataMarkdown;
+function MarkDownToTriplet() {
+  // Step 1: Parse the Markdown into lines and split into sections
+  let [lines, results] = searchText(' ');
+  // Step 2: Process results to extract metadata and content
+  let processedResults = results.map(function([noteLines, hidden, metadata]) {
+    let date = metadata[0];
+    let tags = metadata[1].map(tag=>(([a,b,c])=>`${a}${(c)?'_'+c:''}`)(tagChopper(tag)));
+    let noteLinesProcessed = noteLines.
+      map(i => lines[i]).
+      map(function(line, j) {
+        return j === 0 ? extractMetadata(line).content : line;
+      }
+    );
+    return [date, tags, noteLinesProcessed];
+  });
+  // Step 3: Format processed results into triplets
+  let formattedResults = processedResults.map(function([date, tags, noteLines]) {
+    let firstLine = `|${date||''}|${tags.join(' ')||''}|`;
+    let content = noteLines.join('\n');
+    return `${firstLine}${content}`;
+  });
+  // Step 4: Join triplets and update the result
+  let tripletText = formattedResults.join('\n');
+  mainPad.value = tripletText;
 }
 function evaluateAst(ast, note, metadata) { //judge note against AST
   // Check if all tags in the AST are included in the note's metadata tags
@@ -746,6 +816,12 @@ async function extractTags(query="") {
   const uniqueTags = new Set();
   for (const line of lines) {
     const metadata = extractMetadata(line);
+    metadata = {
+      ...metadata,
+      tags: metadata.tags.map(
+        tag => tagChopper(tag)[0]
+      )
+    }
     if (!query || querys.some(aquery => metadata.tags.includes(aquery))) {
       for (const tag of metadata.tags) {
         uniqueTags.add(tag);
