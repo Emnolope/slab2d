@@ -475,7 +475,7 @@ function extractMetadataMarkdown(note) {
     metadata.content = match[3];
   }
   return metadata;
-} let extractMetadata=extractMetadataMarkdown;
+} let extractMetadata=extractMetadataTriplet;
 function MarkDownToTriplet() {
   // Step 1: Parse the Markdown into lines and split into sections
   let [lines, results] = searchText(' ');
