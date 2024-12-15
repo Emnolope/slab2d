@@ -27,7 +27,8 @@ async function load() {
   cloud = puff;
   mainPad.value = '';
   for (const mist of cloud) {
-    mainPad.value += mist.view() + `\n||fileend ${mist.site_id}|${mist.siteHash}\n`;
+    //mainPad.value += mist.view() + `\n||fileend ${mist.site_id}|${mist.siteHash}\n`;
+    mainPad.value += mist.view() + `\n# #fileend #${mist.site_id} ${mist.siteHash}\n`;
     debuglog('loadedtext');
     debuglog(mist.site_id);
   }
@@ -39,16 +40,17 @@ function save() {
     debuglog("text area empty! Refusing to save.");
     return;
   }
-  let separators = cloud.map(mist => `\n||fileend ${mist.site_id}|${mist.siteHash}\n`);
+  //let separators = cloud.map(mist => `\n||fileend ${mist.site_id}|${mist.siteHash}\n`);
+  let separators = cloud.map(mist => `\n# #fileend #${mist.site_id} ${mist.siteHash}\n`);
   let splitText = separators.reduce((acc, separator) => {
       let [before, ...after] = acc.pop().split(separator);
       return [...acc, before, ...after];
   }, [finalPad.value]);
   //debuglog(splitText);
-  //for (let i = 0; i < 1; i++) {
-  for (let i = 0; i < cloud.length; i++) {
-    cloud[i].save(splitText[i]);
-  }
+  cloud.forEach((puff,i)=>setTimeout(
+    ()=>puff.save(splitText[i]),
+    i*2*1000
+  ));
 }
 class ProtectedTextApi {
   constructor(site_id, passwd) {
@@ -475,7 +477,7 @@ function extractMetadataMarkdown(note) {
     metadata.content = match[3];
   }
   return metadata;
-} let extractMetadata=extractMetadataTriplet;
+} let extractMetadata=extractMetadataMarkdown;
 function MarkDownToTriplet() {
   // Step 1: Parse the Markdown into lines and split into sections
   let [lines, results] = searchText(' ');
