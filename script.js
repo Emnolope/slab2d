@@ -28,7 +28,8 @@ async function load() {
   mainPad.value = '';
   for (const mist of cloud) {
     //mainPad.value += mist.view() + `\n||fileend ${mist.site_id}|${mist.siteHash}\n`;
-    mainPad.value += mist.view() + `\n# #fileend #${mist.site_id} ${mist.siteHash}\n`;
+    //mainPad.value += mist.view() + `\n# #fileend #${mist.site_id} ${mist.siteHash}\n`;
+    mainPad.value += mist.view() + `\n# [[fileend]] [[${mist.site_id}]] ${mist.siteHash}\n`;
     debuglog('loadedtext');
     debuglog(mist.site_id);
   }
@@ -41,7 +42,8 @@ function save() {
     return;
   }
   //let separators = cloud.map(mist => `\n||fileend ${mist.site_id}|${mist.siteHash}\n`);
-  let separators = cloud.map(mist => `\n# #fileend #${mist.site_id} ${mist.siteHash}\n`);
+  //let separators = cloud.map(mist => `\n# #fileend #${mist.site_id} ${mist.siteHash}\n`);
+  let separators = cloud.map(mist => `\n# [[fileend]] [[${mist.site_id}]] ${mist.siteHash}\n`);
   let splitText = separators.reduce((acc, separator) => {
       let [before, ...after] = acc.pop().split(separator);
       return [...acc, before, ...after];
@@ -207,7 +209,7 @@ function resetText(u,d,t,q) {
   if (q) cloud = new ProtectedTextApi(" "," "), loadName.value = loadPass.value = '';
 }
 function tagChopper(tag) {
-  const spots = ['-', '.', '/', '_', '~'].
+  const spots = ['-', '.', '/', '_', '~', '#'].
     map(sep => tag.indexOf(sep)).
     filter(index => index !== -1);
   const first = Math.min(...spots);
@@ -438,8 +440,10 @@ function TripletToMarkDown() {
   let formattedResults = processedResults.map(function([date, tags, noteLines]) {
     let firstLine = [
       '#', 
-      ...(date ? [`#date/${date}`] : []),
-      ...tags.map(tag=>(([a,b,c])=>`#${a}${(c)?'/'+c:''}`)(tagChopper(tag))),
+      //...(date ? [`#date/${date}`] : []),
+      //...tags.map(tag=>(([a,b,c])=>`#${a}${(c)?'/'+c:''}`)(tagChopper(tag))),
+      ...(date ? [`[[date#${date}]]`] : []),
+      ...tags.map(tag=>(([a,b,c])=>`[[${a}${(c)?'#'+c:''}]]`)(tagChopper(tag))),
       ...([noteLines[0]] || [])
     ].join(' ');
     return [
@@ -457,17 +461,20 @@ function extractMetadataMarkdown(note) {
     tags: [],
     content: note
   };
-  const regex = /^#\s((#[^\s]+\s)+)(.*?)$/;
+  //const regex = /^#\s((#[^\s]+\s)+)(.*?)$/;
+  const regex = /^#\s((\[\[[^\s]+\]\]\s)+)(.*?)$/;
   const match = note.match(regex);
   if (match) {
     let tags = match[1].
       split(/\s+/).
       filter(Boolean).
         map(tag => tag.
-          replace(/^#/, '')
+          //replace(/^#/, '')
+          slice(2, -2)
       );
     for (let i = 0; i < tags.length; i++) {
-      if (/^date\//.test(tags[i])) {
+      //if (/^date\//.test(tags[i])) {
+      if (/^date#/.test(tags[i])) {
         metadata.date = tagChopper(tags[i])[2];
         tags.splice(i, 1);
         break;
