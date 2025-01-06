@@ -462,7 +462,8 @@ function extractMetadataMarkdown(note) {
     content: note
   };
   //const regex = /^#\s((#[^\s]+\s)+)(.*?)$/;
-  const regex = /^#\s((\[\[[^\s]+\]\]\s)+)(.*?)$/;
+  //const regex = /^#\s((\[\[[^\s]+\]\]\s)+)(.*?)$/;
+  const regex = /^#\s((\[\[[^\s]+\]\]\s*)+)(.*?)$/;
   const match = note.match(regex);
   if (match) {
     let tags = match[1].
@@ -818,26 +819,21 @@ function buildGraph(relations='') {
   }
   return graph;
 }
-async function extractTags(query="") {
+async function extractTags(query = '') {
+  //debuglog("1");
   const querys = query.split(" ");
-  debuglog(querys);
-  const lines = mainPad.value.split('\n');
+  const [lines, results] = searchText(" ");
   const uniqueTags = new Set();
-  for (const line of lines) {
-    const metadata = extractMetadata(line);
-    metadata = {
-      ...metadata,
-      tags: metadata.tags.map(
-        tag => tagChopper(tag)[0]
-      )
-    }
-    if (!query || querys.some(aquery => metadata.tags.includes(aquery))) {
-      for (const tag of metadata.tags) {
+  for (const result of results) {
+    const metadata = result[2];
+    tags = metadata[1].map(tag=>tagChopper(tag)[0]);
+    if (!query || querys.some(aquery => tags.includes(aquery))) {
+      for (const tag of tags) {
         uniqueTags.add(tag);
       }
     }
   }
-  graphResults.value=[...uniqueTags].join(' ');
+  graphResults.value = [...uniqueTags].join(' ');
 }
 function graphWarp(query) {
   let graph = buildGraph();
