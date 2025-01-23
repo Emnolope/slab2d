@@ -78,14 +78,27 @@ outer_function()
     </details>
     <details id="chat-section">
       <summary>
-        <h1>Secretary</h1>
+       <h1>
+        Secretary
+        </h1>
       </summary>
-     <textarea id="chat-context">Rule number 1) There are no rules.</textarea>
-     <textarea id="chat-pad"></textarea>
-     <button onclick="chatReply(chatContext.value, chatPad.value, smartCheckbox.checked).then(reply=>chatPad.value+='\n'+reply);">Hey GPT</button>
-     <input type="checkbox" id="smartCheckbox"> Smart
-     <input id="chat-key" type="password" placeholder="ChatGPT API key">
-    </details>
+      <textarea id="chat-context">Rule number 1) There are no rules.</textarea>
+      <textarea id="chat-pad"></textarea>
+      <select id="chat-model">
+        <option value="qwen/qwen-2-7b-instruct:free" selected>Qwen 2 7B Instruct</option>
+        <option value="google/gemini-2.0-flash-thinking-exp-1219:free">Gemini 2.0 Flash (Free)</option>
+        <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+        <option value="google/gemini-flash-1.5">Gemini Flash 1.5</option>
+        <option value="google/gemini-flash-1.5-8b">Gemini Flash 1.5 8B</option>
+        <option value="deepseek/deepseek-chat">DeepSeek Chat</option>
+        <option value="meta-llama/llama-3.2-1b-instruct">Llama 3.2 1B Instruct</option>
+       <option value="mistralai/mistral-nemo">Mistral Nemo</option>
+        <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+        <option value="gryphe/mythomax-l2-13b">MythoMax L2 13B</option>
+      </select>
+      <button onclick="chatReply(chatContext.value, chatPad.value, chatModel.value).then(reply=>chatPad.value+='\n'+reply);">Hey GPT!</button>
+     <input id="chat-key" type="password" placeholder="Open Router API key">
+    </details> 
     <details id="user-code-section">
       <summary>
         <h1>User Code</h1>
