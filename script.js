@@ -7,6 +7,7 @@ const graphResults =    document.getElementById('graph-results');
 const chatContext =     document.getElementById('chat-context');
 const chatPad =         document.getElementById('chat-pad'); //REFACTOR THIS TO CHATCONTENT CAUSE IT RHYMES
 const chatKey =         document.getElementById('chat-key');
+const chatModel =       document.getElementById('chat-model');
 const searchQuery =     document.getElementById('search-query');
 const searchGraphWarp = document.getElementById('search-graph-warp');
 const searchSingleton = document.getElementById('search-singleton');
@@ -1063,64 +1064,55 @@ function tapeEater(tape) {
   }
   return [token, restOfTape];
 }
-function chatReply(context, prompt, useGPT4 = false) {
-  debuglog(useGPT4);
-  debuglog('Prompt:');
-  debuglog(prompt);
-  if (!chatPad || !chatKey) {
-    debuglog('Error: chatPad or chatKey is null');
-    return;
-  }
-  debuglog("Thinking...")
-  debuglog('Chat Key:')
-  debuglog(chatKey.value);
-  return new Promise((resolve, reject) => {
-    let url = 'https://api.openai.com/v1/chat/completions';
-    let model = useGPT4 ? 'gpt-4-1106-preview' : 'gpt-3.5-turbo-1106';
-    let body = JSON.stringify({
-      'model': model,
-      'messages': [{
-        'role': 'system',
-        'content': context
-      }, {
-        'role': 'user',
-        'content': prompt
-      }],
-      'max_tokens': 2048
-    });
-    fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${chatKey.value}`
-      },
-      body: body
-    })
-    .then(response => {
-      debuglog('Response Status:');
-      debuglog(response.status);
-      debuglog('Response OK:')
-      debuglog(response.ok);
-      return response.json();
-    })
-    .then(data => {
-      debuglog('Data:');
-      debuglog(JSON.stringify(data, null, 2));
-      debuglog("Hey human!");
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        debuglog('Error: data.choices is undefined');
-        reject('Error: Unexpected API response');
-      } else {
-        let reply = data.choices[0].message.content;
-        resolve(reply);
-      }
-    })
-    .catch(error => {
-      debuglog('Fetch Error:');
-      debuglog(error);
-      reject('Error!');
-    });
-  });
+function chatReply(context, prompt, model) {
+ return new Promise((resolve, reject) => {
+   //debuglog("Prompt:", prompt);
+   debuglog("Model:", model);
+   debuglog("Thinking...");
+   fetch("https://openrouter.ai/api/v1/chat/completions", {
+     method: "POST",
+     headers: {
+       "Authorization": `Bearer ${chatKey.value}`,
+       "HTTP-Referer": "emnolope.github.io",
+       "X-Title": "Slab2D",
+       "Content-Type": "application/json"
+     },
+     body: JSON.stringify({
+       "model": model,
+       "messages": [
+         {
+           "role": "system",
+           "content": context
+         },
+         {
+           "role": "user",
+           "content": prompt
+         }
+       ]
+     })
+   })
+   .then(response => {
+     debuglog("Response Status: ", response.status);
+     if (!response.ok) {
+       throw new Error(`HTTP error! status: ${response.status}`);
+     }
+     return response.json();
+   })
+   .then(data => {
+     debuglog("Hey human!");
+     debuglog("Data:", JSON.stringify(data, null, 2));
+     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+       throw new Error("Unexpected API response");
+     }
+     let reply = data.choices[0].message.content;
+     resolve(reply);
+   })
+   .catch(error => {
+     debuglog("Hey human!");
+     debuglog("Fetch Error: ", error);
+     reject("Error!");
+   });
+ });
 }
 function replaceFragmentsTag(search, replace = '') {
   console.log(`Replacing tag: ${search} with ${replace}`);
