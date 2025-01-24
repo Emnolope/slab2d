@@ -97,7 +97,8 @@ outer_function()
         <option value="gryphe/mythomax-l2-13b">MythoMax L2 13B</option>
       </select>
       <button onclick="chatReply(chatContext.value, chatPad.value, chatModel.value).then(reply=>chatPad.value+='\n'+reply);">Hey GPT!</button>
-     <input id="chat-key" type="password" placeholder="Open Router API key">
+      <input id="chat-key" type="password" placeholder="Open Router API key">
+      <button onclick="chatKey.value = mainPad.value.match(/sk-or-v1-[a-zA-Z0-9]+/g)?.[0] || chatKey.value">Import!</button> 
     </details> 
     <details id="user-code-section">
       <summary>
