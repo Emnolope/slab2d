@@ -1100,7 +1100,7 @@ function chatReply(context, prompt, model) {
    })
    .then(data => {
      debuglog("Hey human!");
-     debuglog("Data:", JSON.stringify(data, null, 2));
+     //debuglog("Data:", JSON.stringify(data, null, 2));
      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
        throw new Error("Unexpected API response");
      }
