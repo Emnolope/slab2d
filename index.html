@@ -112,6 +112,7 @@ outer_function()
       <button onclick="extractMetadata=extractMetadataMarkdown;MarkDownToTriplet()">Convert #->|||</button>
       <button onclick="extractMetadata=extractMetadataTriplet">Format |||</button>
       <button onclick="extractMetadata=extractMetadataMarkdown">Format #</button>
+      <button onclick="downloadObsidianZip();">Obsidian</button>
     </details>
     <div id="search-section">
       <input id="search-query" type="text" value="-arch -del" placeholder="Search tags...">
@@ -140,6 +141,7 @@ outer_function()
   </div>
   <div id="debug"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

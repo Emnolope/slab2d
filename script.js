@@ -447,7 +447,7 @@ function TripletToMarkDown() {
       //...tags.map(tag=>(([a,b,c])=>`#${a}${(c)?'/'+c:''}`)(tagChopper(tag))),
       ...(date ? [`[[date#${date}]]`] : []),
       ...tags.map(tag=>(([a,b,c])=>`[[${a}${(c)?'#'+c:''}]]`)(tagChopper(tag))),
-      ...([noteLines[0]] || [])
+      ...(noteLines[0] ? [noteLines[0]] : [])
     ].join(' ');
     return [
       firstLine, 
@@ -466,7 +466,9 @@ function extractMetadataMarkdown(note) {
   };
   //const regex = /^#\s((#[^\s]+\s)+)(.*?)$/;
   //const regex = /^#\s((\[\[[^\s]+\]\]\s)+)(.*?)$/;
-  const regex = /^#\s((\[\[[^\s]+\]\]\s*)+)(.*?)$/;
+  //const regex = /^#\s((\[\[[^\s]+\]\]\s*)+)(.*?)$/;
+  const regex = /^#((\s\[\[[^\s]+\]\])+)(?:\s(.*))?$/;
+  //const regex = /^#((\s\[\[[^\s]+\]\])+)(\s(.*))?$/;
   const match = note.match(regex);
   if (match) {
     let tags = match[1].
@@ -485,8 +487,9 @@ function extractMetadataMarkdown(note) {
       }
     }
     metadata.tags = tags;
-    metadata.content = match[3];
+    metadata.content = match[3] || "";
   }
+  console.log(metadata);
   return metadata;
 } let extractMetadata=extractMetadataMarkdown;
 function MarkDownToTriplet() {
@@ -514,6 +517,218 @@ function MarkDownToTriplet() {
   let tripletText = formattedResults.join('\n');
   mainPad.value = tripletText;
 }
+function downloadObsidianZip() {
+  debuglog("Creating Markdown zip... see commented code below function for inverse (Obsidian plugin)");
+  const zip = new JSZip();
+  // Step 1: Search text and get lines and results
+  let [lines, results] = searchText(' ');
+  // Step 2: Process results to get tags and note lines
+  let processedResults = results.map(function([noteLines, hidden, metadata]) {
+    let date = metadata[0];
+    let tags = metadata[1];
+    let noteLinesProcessed = noteLines.map(function(i) {
+      return lines[i];
+    }).map(function(line, j) {
+      return j === 0 ? extractMetadata(line).content : line;
+    });
+    return [date, tags, noteLinesProcessed];
+  });
+  // Step 3: Format processed results into Markdown
+  processedResults.forEach(function([date, tags, noteLines], index) {
+    const fileNumTag = `file#${index + 1}`;
+    let title = "file_" + (index + 1); // Default title
+    // Match title only from beginning of the line
+    const titleMatch = noteLines[0].match(/^`([^`]+)`(?:\s(.*))?$/);
+    if (titleMatch && titleMatch[1]) {
+      title = titleMatch[1].trim().replace(/[\/\\:*?"<>|]/g, '_'); // Remove invalid filename characters
+      noteLines[0] = titleMatch[2] || "";
+    }
+    let firstLine = [
+      '#', 
+      //...(date ? [`#date/${date}`] : []),
+      //...tags.map(tag=>(([a,b,c])=>`#${a}${(c)?'/'+c:''}`)(tagChopper(tag))),
+      `[[${fileNumTag}]]`,
+      ...(date ? [`[[date#${date}]]`] : []),
+      ...tags.map(tag=>(([a,b,c])=>`[[${a}${(c)?'#'+c:''}]]`)(tagChopper(tag))),
+      ...(noteLines[0] ? [noteLines[0]] : [])
+    ].join(' ');
+    const formattedNote = [
+      firstLine, 
+      ...noteLines.slice(1)
+    ].join('\n');
+    const filename = `${title}.md`;
+    zip.file(filename, formattedNote);
+  });
+  
+  const d = new Date();
+  const timestamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+  const loadNameValue = document.getElementById('load-name').value;
+  const zipFilename = loadNameValue ? `${loadNameValue}_${timestamp}_markdown` : 'markdown_notes';
+  
+  // Generate the zip and trigger download
+  zip.generateAsync({
+    type: "blob",
+    compression: "STORE" // No compression, raw storage for maximum speed
+  })
+    .then(function(content) {
+      const url = URL.createObjectURL(content);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = zipFilename + ".zip";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+}
+/*
+<VAULT>/.obsidian/plugins/uploadslab2dtxt/main.js
+```main.js
+const { Plugin, Notice } = require('obsidian');
+
+class UploadSlab2DTxt extends Plugin {
+  async onload() {
+    console.log('Loading UploadSlab2DTxt plugin');
+
+    // Add ribbon icon
+    this.addRibbonIcon('upload', 'Convert to Slab2D', () => {
+      this.convertVaultToSlab2D();
+    });
+
+    // Add command
+    this.addCommand({
+      id: 'convert-to-slab2d',
+      name: 'Convert Vault to Slab2D format',
+      callback: () => this.convertVaultToSlab2D()
+    });
+  }
+
+  async convertVaultToSlab2D() {
+    const files = this.app.vault.getMarkdownFiles();
+    const entries = [];
+    
+    // Process each file into entries
+    for (const file of files) {
+      const content = await this.app.vault.read(file);
+      const [processedContent, fileNum] = this.convertObsidianToSlab2D(content, file.basename);
+      entries.push({
+        fileNum: fileNum,
+        content: processedContent
+      });
+    }
+    
+    // Sort entries by file number
+    entries.sort((a, b) => a.fileNum - b.fileNum);
+    
+    // Join all entries with proper line breaks
+    let slab2dContent = entries.map(entry => entry.content).join('\n');
+    
+    // Create a new file with the converted content
+    const outputFileName = 'slab2d_export.txt';
+    await this.app.vault.create(outputFileName, slab2dContent);
+    
+    new Notice(`Converted to Slab2D format and saved as ${outputFileName}!`);
+  }
+
+  // ----- ALMOST EXACT COPY FROM SLAB2D WEBAPP -----
+  tagChopper(tag) {
+    const spots = ['-', '.', '/', '_', '~', '#'].
+      map(sep => tag.indexOf(sep)).
+      filter(index => index !== -1);
+    const first = Math.min(...spots);
+    return isNaN(first)
+      ? [tag, '', '']
+      : [tag.slice(0, first), tag[first], tag.slice(first + 1)];
+  }
+
+  extractMetadataMarkdown(note) {
+    const metadata = {
+      date: null,
+      tags: [],
+      content: note
+    };
+    //const regex = /^#\s((#[^\s]+\s)+)(.*?)$/;
+    //const regex = /^#\s((\[\[[^\s]+\]\]\s)+)(.*?)$/;
+    //const regex = /^#\s((\[\[[^\s]+\]\]\s*)+)(.*?)$/;
+    const regex = /^#((\s\[\[[^\s]+\]\])+)(?:\s(.*))?$/;
+    //const regex = /^#((\s\[\[[^\s]+\]\])+)(\s(.*))?$/;
+    const match = note.match(regex);
+    if (match) {
+      let tags = match[1].
+        split(/\s+/).
+        filter(Boolean).
+          map(tag => tag.
+            //replace(/^#/, '')
+            slice(2, -2)
+        );
+      for (let i = 0; i < tags.length; i++) {
+        //if (/^date\//.test(tags[i])) {
+        if (/^date#/.test(tags[i])) {
+          metadata.date = this.tagChopper(tags[i])[2];
+          tags.splice(i, 1);
+          break;
+        }
+      }
+      metadata.tags = tags;
+      metadata.content = match[3] || "";
+    }
+    return metadata;
+  }
+
+  convertObsidianToSlab2D(markdownContent, filename) {
+    // Split content into lines
+    const lines = markdownContent.split('\n');
+    const firstLine = lines[0];
+    
+    // Extract metadata from first line
+    const metadata = this.extractMetadataMarkdown(firstLine);
+    
+    // Extract the file number
+    let fileNum = -Infinity; // Default to a l if not found
+    const fileTag = metadata.tags.find(tag => tag.startsWith('file#'));
+    if (fileTag) {
+      fileNum = parseInt(this.tagChopper(fileTag)[2], 10);
+      // Remove file tag from tags array
+      metadata.tags = metadata.tags.filter(tag => !tag.startsWith('file#'));
+    }
+    
+    let formattedFirstLine = [
+      '#',
+      ...(metadata.date ? [`[[date#${metadata.date}]]`] : []),
+      ...metadata.tags.map(tag=>(([a,b,c])=>`[[${a}${(c)?'#'+c:''}]]`)(this.tagChopper(tag))),
+      ...(!filename.match(/^file_\d+$/) ? [`\`${filename.replace(/\.md$/, '')}\``] : []), // title insertion
+      ...(metadata.content ? [metadata.content] : [])
+    ].join(' ');
+    
+    // Rebuild the content with the formatted first line
+    let formattedResult = [
+      formattedFirstLine,
+      ...lines.slice(1)
+    ].join('\n');
+    
+    return [formattedResult, fileNum];
+  }
+
+  onunload() {
+    console.log('Unloading UploadSlab2DTxt plugin');
+  }
+}
+
+module.exports = UploadSlab2DTxt;
+```
+<VAULT>/.obsidian/plugins/uploadslab2dtxt/manifest.json
+```manifest.json
+{
+  "id": "uploadslab2dtxt",
+  "name": "UploadSlab2DTxt",
+  "version": "1.0.0",
+  "minAppVersion": "0.12.0",
+  "description": "Converts Obsidian notes back to Slab2D format",
+  "author": "YourName",
+  "isDesktopOnly": false
+}
+```
+*/
 function evaluateAst(ast, note, metadata) { //judge note against AST
   // Check if all tags in the AST are included in the note's metadata tags
   return ast.normal.some(tag => metadata.tags.includes(tag)) && 
