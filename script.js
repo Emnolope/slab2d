@@ -14,6 +14,7 @@ const searchSingleton = document.getElementById('search-singleton');
 const tempPad =         document.getElementById("temp-pad");
 const fragmentResults = document.getElementById('fragment-results');
 const finalPad =        document.getElementById('final-pad');
+const crossOrigin =     true;
 
 async function load() {
   let loadNames=loadName.value.split(" ");
@@ -66,10 +67,13 @@ class ProtectedTextApi {
     this.dbversion = 0;
   }
   async loadTabs() {
-    //CHANGED TO WORK WITH LIBRARY COMPUTERS
-    //const url = `https://api.allorigins.win/raw?url=` + `${this.endpoint}?action=getJSON&dummy=${Date.now()}`;
-    const url = 'https://corsproxy.io/?' + encodeURIComponent(`${this.endpoint}?action=getJSON&dummy=${Date.now()}`);
-    //const url = `${this.endpoint}?action=getJSON&dummy=${Date.now()}`;
+    let url;
+    if (crossOrigin)
+      //CHANGED TO WORK WITH LIBRARY COMPUTERS
+      //const url = `https://api.allorigins.win/raw?url=` + `${this.endpoint}?action=getJSON&dummy=${Date.now()}`;
+      url = 'https://corsproxy.io/?' + encodeURIComponent(`${this.endpoint}?action=getJSON&dummy=${Date.now()}`);
+    else
+      url = `${this.endpoint}?action=getJSON&dummy=${Date.now()}`;
     const response = await fetch(url);
     this.siteObj = await response.json();
     this.dbversion = this.siteObj['currentDBVersion'];
@@ -110,9 +114,12 @@ class ProtectedTextApi {
     };
     var ret = undefined;
     try {
-      //const url = 'https://corsproxy.io/?' + encodeURIComponent(this.endpoint);
-      const url = 'https://cors-proxy.fringe.zone/' + this.endpoint;
-      //const url = this.endpoint;
+      let url;
+      if (crossOrigin)
+        //const url = 'https://corsproxy.io/?' + encodeURIComponent(this.endpoint);
+        url = 'https://cors-proxy.fringe.zone/' + this.endpoint;
+      else
+        url = this.endpoint;
       const response = await fetch(url, clientHeaders);
       if (response.headers.get('Content-Type') === 'application/json') {
         ret = await response.json();
@@ -184,7 +191,7 @@ function downloadContent() {
   const loadNameValue = document.getElementById('load-name').value;
   const d = new Date();
   const timestamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
-  a.download = loadNameValue ? `${loadNameValue}_${timestamp}.txt` : 'download.txt';
+  a.download = loadNameValue ? `${timestamp}_${loadNameValue}.txt` : 'download.txt';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
