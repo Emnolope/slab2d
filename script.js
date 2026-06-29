@@ -524,18 +524,10 @@ function MarkDownToTriplet() {
   let tripletText = formattedResults.join('\n');
   mainPad.value = tripletText;
 }
-// Update downloadObsidianZip function to handle async hash calculation
 async function downloadObsidianZip() {
-  console.log("1");
-  // --- INSERTION 1 ---
-    const _timer_start = performance.now();
-    debuglog("Creating Markdown zip...");
-  const zip = new JSZip();
-  // Step 1: Search text and get lines and results
+  const _timer_start = performance.now();
+  debuglog("Creating Markdown zip...");
   let [lines, results] = searchText(' ');
-  // Create a hashSet to track used hashes and handle collisions
-  const usedHashes = new Set();
-  // Step 2: Process results to get tags and note lines
   let processedResults = results.map(function([noteLines, hidden, metadata]) {
     let date = metadata[0];
     let tags = metadata[1];
@@ -546,78 +538,69 @@ async function downloadObsidianZip() {
     });
     return [date, tags, noteLinesProcessed];
   });
-  // --- INSERTION 2 ---
-    const _timer_after_preprocess = performance.now();
-    debuglog(`TIMER: Preprocessing took ${(_timer_after_preprocess - _timer_start).toFixed(2)} ms`);
-  // Step 3: Format processed results into Markdown and create file
+  const _timer_after_preprocess = performance.now();
+  debuglog(`TIMER: Preprocessing took ${(_timer_after_preprocess - _timer_start).toFixed(2)} ms`);
+  const zip = new JSZip();
+  const usedFilenames = new Set();
   for (let index = 0; index < processedResults.length; index++) {
-    console.log("2");
     const [date, tags, noteLines] = processedResults[index];
-    // Match title only from beginning of the line
     let title = null;
     const titleMatch = noteLines[0].match(/^`([^`]+)`(?:\s(.*))?$/);
     if (titleMatch && titleMatch[1]) {
       title = titleMatch[1].trim().replace(/[\/\\:*?"<>|]/g, '_'); // Remove invalid filename characters
       noteLines[0] = titleMatch[2] || "";
     }
-    // Create first line with all metadata
-    console.log("3");
-    let firstLine = [
+    if (title && usedFilenames.has(title)) {
+      let n = 1;
+      let offbrand = `${title}_${n}`;
+      while (usedFilenames.has(offbrand)) {
+        n++;
+        offbrand=`${title}_${n}`
+      }
+      title=offbrand;
+    }
+    const firstLine = [
       '#',
       //...(date ? [`#date/${date}`] : []),
       //...tags.map(tag=>(([a,b,c])=>`#${a}${(c)?'/'+c:''}`)(tagChopper(tag))),
-      `[[file#${index + 1}]]`, //Inject file order metadata
       ...(date ? [`[[date#${date}]]`] : []),
-      ...tags.map(tag=>(([a,b,c])=>`[[${a}${(c)?'#'+c:''}]]`)(tagChopper(tag))),
+      ...tags.map(tag => (([a, b, c]) => `[[${a}${(c) ? '#' + c : ''}]]`)(tagChopper(tag))),
       ...(noteLines[0] ? [noteLines[0]] : [])
     ].join(' ');
-    // Format the complete note
     const formattedNote = [
       firstLine,
       ...noteLines.slice(1)
     ].join('\n');
-    const hashNote = [
-      firstLine.replace(/\[\[file#\d+\]\]\s*/, ''),
-      ...noteLines.slice(1)
-    ].join('\n');
-    console.log("4");
-    // Use Blake3 from hash-wasm
-    let hash = await hashwasm.xxhash64(hashNote);
-    // Handle hash collisions, increment the hash if collision occurs
-    while (usedHashes.has(hash)) {
-      hash = BigInt(`0x${hash}`);
-      hash++;
-      hash = hash % (16n**16n);
-      hash = hash.toString(0x10).padStart(16, '0');
+    if (!title) {
+      let hash = BigInt(`0x${await hashwasm.xxhash64(formattedNote)}`)
+      title = `hash_${hash.toString(0x10).padStart(16, '0')}`;
+      while (usedFilenames.has(title)) {
+        hash = hash + 1n; hash = hash % (16n**16n);
+        title = `hash_${hash.toString(0x10).padStart(16, '0')}`;
+      }
     }
-    console.log("5");
-    usedHashes.add(hash);
-    // Use title if available, otherwise use hash-based name
-    const filename = title ? `${title}` : `hash_${hash}`;
-    // Add file to zip
-    zip.file(filename + `.md`, formattedNote);
+    zip.file(title + `.md`, formattedNote);
+    usedFilenames.add(title);
   }
-  console.log("6");
-  // --- INSERTION 3 ---
-    const _timer_after_loop = performance.now();
-    debuglog(`TIMER: Main loop took ${(_timer_after_loop - _timer_after_preprocess).toFixed(2)} ms`);
-  // Generate timestamp and filename for the zip
+  const _timer_after_loop = performance.now();
+  debuglog(`TIMER: Main loop took ${(_timer_after_loop - _timer_after_preprocess).toFixed(2)} ms`);
+  const manifestContent = [`# [[uploadslab2dtxt]]`,...Array.from(usedFilenames)].join('\n');
+  const manifestFilename = "uploadslab2dtxt.md"; // As requested
+  zip.file(manifestFilename, manifestContent);
+  debuglog(`manifest file made`);
   const d = new Date();
   const timestamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
   const loadNameValue = document.getElementById('load-name').value;
   const zipFilename = loadNameValue ? `${timestamp}_${loadNameValue}` : `${timestamp}_slab2d`;
 
-  // --- INSERTION 4 ---
-    debuglog("TIMER: Starting zip generation...");
-  // Generate the zip and trigger download
+  debuglog("TIMER: Starting zip generation...");
   zip.generateAsync({
     type: "blob",
     compression: "STORE" // No compression, raw storage for maximum speed
-  })
+    })
     .then(function(content) {
-      // --- INSERTION 5 ---
-        const _timer_after_zipgen = performance.now();
-        debuglog(`TIMER: Zip generation took ${(_timer_after_zipgen - _timer_after_loop).toFixed(2)} ms`);
+      const _timer_after_zipgen = performance.now();
+      debuglog(`TIMER: Zip generation took ${(_timer_after_zipgen - _timer_after_loop).toFixed(2)} ms`);
       const url = URL.createObjectURL(content);
       const a = document.createElement("a");
       a.href = url;
@@ -626,12 +609,14 @@ async function downloadObsidianZip() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      // --- INSERTION 6 ---
-        const _timer_end_success = performance.now();
-        debuglog(`TIMER: SUCCESS - Total time ${(_timer_end_success - _timer_start).toFixed(2)} ms`);
+      const _timer_end_success = performance.now();
+      debuglog(`TIMER: SUCCESS - Total time ${(_timer_end_success - _timer_start).toFixed(2)} ms`);
     })
-    // --- INSERTION 7 ---
-      .catch(function(error) { const _timer_end_error = performance.now(); debuglog("Error during zip generation or download:", error); debuglog(`TIMER: FAILURE - Total time until error ${(_timer_end_error - _timer_start).toFixed(2)} ms`); });
+    .catch(function(error) {
+      const _timer_end_error = performance.now();
+      console.error("Error during zip generation or download:", error);
+      debuglog(`TIMER: FAILURE - Total time until error ${(_timer_end_error - _timer_start).toFixed(2)} ms`);
+    });
 }
 /*
 <VAULT>/.obsidian/plugins/uploadslab2dtxt/main.js
@@ -641,11 +626,9 @@ const { Plugin, Notice, normalizePath } = require('obsidian');
 class UploadSlab2DTxt extends Plugin {
   async onload() {
     console.log('Loading UploadSlab2DTxt plugin');
-    // Add ribbon icon
     this.addRibbonIcon('upload', 'Convert to Slab2D', () => {
       this.convertVaultToSlab2D();
     });
-    // Add command
     this.addCommand({
       id: 'convert-to-slab2d',
       name: 'Convert Vault to Slab2D format',
@@ -663,38 +646,66 @@ class UploadSlab2DTxt extends Plugin {
       if (!await this.app.vault.adapter.exists(exportFolderPath)) {
         await this.app.vault.createFolder(exportFolderPath);
       }
-      console.log('Grabbing MDs');
-      const files = this.app.vault.getMarkdownFiles();
-      const entries = [];
-      // Process each file into entries
-      for (const file of files) {
-        console.log('Processng file');
-        //WHY THE FUCK IS THIS HERE, "GRACEFUL" ERROR HANDLING, WHICH US FUCKING QUIET COMING LIKE A FREIGHT TRAIN TO SABTOGE MY LIFE BY OMMITTING SHIT QUIETLY, FUCKING GET RID OF THIS SHIT!!!
-        //I got rid of evil try catch block
-        const content = await this.app.vault.read(file);
-        const [processedContent, fileNum] = this.convertObsidianToSlab2D(content, file.basename);
-        entries.push({
-          fileNum: fileNum,
-          content: processedContent
-        });
+      
+      console.log('Grabbing all Markdown files...');
+      const allFiles = this.app.vault.getMarkdownFiles();
+      const files = [];
+      let manifestFile = null;
+      
+      // Filter to separate manifest from regular content files
+      for (const file of allFiles) {
+        if (file.basename === 'uploadslab2dtxt') {
+          manifestFile = file;
+        } else {
+          files.push(file);
+        }
       }
-      console.log('Sorting notes');
-      // Sort entries by file number, with JSON fallback
-      entries.sort((a, b) => {
-        if (a.fileNum === b.fileNum)
-          return JSON.stringify(a).localeCompare(JSON.stringify(b));
-        else
-          return a.fileNum<b.fileNum ? -1 : 1;
+      
+      const manifest = await this.app.vault.read(manifestFile);
+      const order = new Map();
+      console.log(`Building manifest`);
+      manifest.
+        split(/\r?\n/).                          // Split lines
+        slice(1).                                // Skip first header line
+        map(line => line.trim()).                // Trim whitespace
+        filter(line => line.length > 0).         // Filter empty lines
+        forEach((filename, index) => {
+          if (!order.has(filename)) {        // only firsts
+            order.set(filename, index);
+          }
+        });
+      
+      console.log(`Sorting files`);
+      files.sort((fileA, fileB) => {
+        const indexA = order.get(fileA.basename) ?? -1;
+        const indexB = order.get(fileB.basename) ?? -1;
+        // fallback to alphabetical sort for stability
+        if (indexA === indexB) {
+          return fileA.basename.localeCompare(fileB.basename);
+        }
+        return indexA < indexB ? -1 : 1;
       });
+      
+      console.log('Converting files to Slab2D format');
+      const entries = [];
+      for (const file of files) {
+        const content = await this.app.vault.read(file);
+        const processedContent = this.convertObsidianToSlab2D(content, file.basename);
+        entries.push(processedContent);
+      }
+      
       console.log('Fusing into monolith');
       // Join all entries with proper line breaks
-      let slab2dContent = entries.map(entry => entry.content).join('\n');
+      let slab2dContent = entries.join('\n');
+      
       // Generate timestamp in the format YYYYMMDDHHMMSS
       const d = new Date();
       const timestamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+      
       // Create the output file path within the exports folder
       const outputFileName = `${timestamp}_obsidian.txt`;
       const outputFilePath = normalizePath(`${exportFolder}/${outputFileName}`);
+      
       // Create the file
       await this.app.vault.create(outputFilePath, slab2dContent);
       new Notice(`Converted to Slab2D format and saved as ${outputFileName} in the exports folder!`);
@@ -757,19 +768,11 @@ class UploadSlab2DTxt extends Plugin {
     // Extract metadata from first line
     const metadata = this.extractMetadataMarkdown(firstLine);
     
-    // Extract the file number
-    let fileNum = -Infinity; // Default if not found
-    const fileTag = metadata.tags.find(tag => tag.startsWith('file#'));
-    if (fileTag) {
-      fileNum = parseInt(this.tagChopper(fileTag)[2], 10);
-      // Remove file tag from tags array
-      metadata.tags = metadata.tags.filter(tag => !tag.startsWith('file#'));
-    }
-    
     let formattedFirstLine = [
       '#',
       ...(metadata.date ? [`[[date#${metadata.date}]]`] : []),
-      ...metadata.tags.map(tag=>(([a,b,c])=>`[[${a}${(c)?'#'+c:''}]]`)(this.tagChopper(tag))),
+      ...((metadata.tags?.length || metadata.date ? metadata.tags : ['idk']).map(tag => (([a,b,c]) => `[[${a}${(c)?'#'+c:''}]]`)(this.tagChopper(tag)))),
+      //...metadata.tags.map(tag=>(([a,b,c])=>`[[${a}${(c)?'#'+c:''}]]`)(this.tagChopper(tag))),
       ...(!(
           /^hash_[0-9A-F]{8}$/i.test(filename.replace(/\.md$/, ''))
             ||
@@ -789,9 +792,9 @@ class UploadSlab2DTxt extends Plugin {
       ...lines.slice(1)
     ].join('\n');
     
-    return [formattedResult, fileNum];
+    return formattedResult;
   }
-
+  
   onunload() {
     console.log('Unloading UploadSlab2DTxt plugin');
   }
@@ -805,7 +808,7 @@ module.exports = UploadSlab2DTxt;
   "id": "uploadslab2dtxt",
   "name": "UploadSlab2DTxt",
   "version": "1.0.0",
-  "minAppVersion": "0.12.0",
+  "minAppVersion": "0.20.0",
   "description": "Converts Obsidian notes back to Slab2D format",
   "author": "YourName",
   "isDesktopOnly": false
